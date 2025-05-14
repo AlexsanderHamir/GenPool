@@ -34,8 +34,13 @@ jobs:
           go test -v -covermode=atomic -coverprofile=coverage.out ./...
           go tool cover -func=coverage.out
 
+      - name: Convert coverage to lcov format
+        run: |
+          go install github.com/AlekSi/go2lcov@latest
+          go2lcov -infile coverage.out -outfile coverage.lcov
+
       - name: Upload coverage to Coveralls
         uses: coverallsapp/github-action@v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          path-to-lcov: coverage.out
+          path-to-lcov: coverage.lcov
