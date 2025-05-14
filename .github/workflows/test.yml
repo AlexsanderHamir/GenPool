@@ -31,7 +31,7 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          go test -v -coverprofile=coverage.out -covermode=atomic ./...
+          go test -v -covermode=atomic -coverprofile=coverage.out ./...
           go tool cover -func=coverage.out
 
       - name: Upload coverage to Coveralls
@@ -39,6 +39,3 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: coverage.out
-          flag-name: run-${{ github.job }}
-          parallel: true
-          coveralls-endpoint: https://coveralls.io
