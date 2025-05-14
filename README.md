@@ -1,4 +1,8 @@
 # Minimal Object Pool
+[![Go Reference](https://pkg.go.dev/badge/github.com/AlexsanderHamir/GenPool.svg)](https://pkg.go.dev/github.com/AlexsanderHamir/GenPool)
+[![Go Report Card](https://goreportcard.com/badge/github.com/AlexsanderHamir/GenPool)](https://goreportcard.com/report/github.com/AlexsanderHamir/GenPool)
+[![Coverage Status](https://coveralls.io/repos/github/AlexsanderHamir/GenPool/badge.svg?branch=main)](https://coveralls.io/github/AlexsanderHamir/GenPool?branch=main)
+
 
 A lightweight, type-safe object pool implementation in Go. This pool implementation aims to be minimalistic, it uses an atomic linked list to get the job done.
 
