@@ -67,6 +67,12 @@ type Poolable interface {
 	GetNext() Poolable
 	// SetNext sets the next object in the pool's linked list
 	SetNext(next Poolable)
+	// GetUsageCount returns the number of times this object has been used
+	GetUsageCount() int64
+	// IncrementUsage increments the usage count of this object
+	IncrementUsage()
+	// ResetUsage resets the usage count to 0
+	ResetUsage()
 }
 
 // PoolConfig holds configuration options for the pool
@@ -129,7 +135,6 @@ func NewPoolWithConfig[T Poolable](cfg PoolConfig[T]) (*Pool[T], error) {
 		stopClean: make(chan struct{}),
 	}
 
-	// Initialize head to zero value of T
 	var zero T
 	p.head.Store(zero)
 
@@ -157,6 +162,8 @@ func (p *Pool[T]) RetrieveOrCreate() (T, error) {
 
 	obj := p.cfg.Allocator()
 	p.active.Add(1)
+	obj.IncrementUsage()
+
 	return obj, nil
 }
 
@@ -172,10 +179,11 @@ func (p *Pool[T]) Put(obj T) error {
 
 		// Set the next pointer to the old head (which may be nil)
 		obj.SetNext(oldHead)
-
 		if p.head.CompareAndSwap(oldHead, obj) {
 			p.size.Add(1)
-			p.active.Add(-1)
+			if p.active.Load() > 0 {
+				p.active.Add(-1)
+			}
 			return nil
 		}
 	}
@@ -199,6 +207,7 @@ func (p *Pool[T]) retrieve() (T, bool) {
 			p.active.Add(1)
 			p.size.Add(-1)
 			oldHead.SetNext(zero)
+			oldHead.IncrementUsage() // Track usage when object is retrieved
 			return oldHead, true
 		}
 	}
@@ -218,14 +227,19 @@ func (p *Pool[T]) Active() int {
 func (p *Pool[T]) Clear() {
 	var zero T
 	for {
-		oldHead, _ := p.head.Load().(T)
-		// Check if oldHead is nil using reflection
+		oldHead, ok := p.head.Load().(T)
+		if !ok {
+			return
+		}
+
 		if reflect.ValueOf(oldHead).IsNil() {
 			return
 		}
 		if p.head.CompareAndSwap(oldHead, zero) {
 			p.size.Store(0)
 			p.active.Store(0)
+			p.cfg.Cleaner(oldHead)
+			oldHead.SetNext(zero)
 			return
 		}
 	}
@@ -271,7 +285,51 @@ func (p *Pool[T]) startCleaner() {
 
 // cleanup removes idle objects based on the cleanup policy
 func (p *Pool[T]) cleanup() {
-	// TODO: Implement cleanup using the new Poolable interface
-	// This will need to be reimplemented to work with objects directly
-	// rather than nodes
+	if !p.cfg.Cleanup.Enabled {
+		return
+	}
+
+	var current, prev T
+	var kept int
+	var removed int
+
+	// Start from the head of the pool
+	current, ok := p.head.Load().(T)
+	if !ok {
+		return
+	}
+
+	if reflect.ValueOf(current).IsNil() {
+		return
+	}
+
+	// Traverse and clean the list
+	for !reflect.ValueOf(current).IsNil() {
+		next := current.GetNext()
+		usageCount := current.GetUsageCount()
+		shouldKeep := usageCount >= p.cfg.Cleanup.MinUsageCount && (p.cfg.Cleanup.TargetSize <= 0 || kept < p.cfg.Cleanup.TargetSize)
+
+		if shouldKeep {
+			// Reset usage count for kept objects
+			current.ResetUsage()
+			prev = current
+			kept++
+		} else {
+			// Remove current object from list
+			if reflect.ValueOf(prev).IsNil() {
+				// We're at the head
+				p.head.Store(next)
+			} else {
+				prev.SetNext(next)
+			}
+			if p.active.Load() > 0 {
+				p.active.Add(-1)
+			}
+			removed++
+		}
+
+		current = next.(T)
+	}
+
+	p.size.Store(int64(kept))
 }

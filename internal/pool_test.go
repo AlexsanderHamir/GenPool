@@ -10,9 +10,10 @@ import (
 
 // TestObject is a simple struct we'll use for testing
 type TestObject struct {
-	ID    int
-	Value string
-	next  atomic.Value // Stores Poolable
+	ID         int
+	Value      string
+	next       atomic.Value // Stores Poolable
+	usageCount atomic.Int64
 }
 
 func (o *TestObject) GetNext() Poolable {
@@ -26,11 +27,24 @@ func (o *TestObject) SetNext(next Poolable) {
 	o.next.Store(next)
 }
 
+func (o *TestObject) GetUsageCount() int64 {
+	return o.usageCount.Load()
+}
+
+func (o *TestObject) IncrementUsage() {
+	o.usageCount.Add(1)
+}
+
+func (o *TestObject) ResetUsage() {
+	o.usageCount.Store(0)
+}
+
 // NonPointerObject is used to test the pointer type constraint
 type NonPointerObject struct {
-	ID    int
-	Value string
-	Next  atomic.Value
+	ID         int
+	Value      string
+	Next       atomic.Value
+	usageCount atomic.Int64
 }
 
 func (o NonPointerObject) GetNext() Poolable {
@@ -38,6 +52,18 @@ func (o NonPointerObject) GetNext() Poolable {
 }
 
 func (o NonPointerObject) SetNext(next Poolable) {}
+
+func (o NonPointerObject) GetUsageCount() int64 {
+	return o.usageCount.Load()
+}
+
+func (o NonPointerObject) IncrementUsage() {
+	o.usageCount.Add(1)
+}
+
+func (o NonPointerObject) ResetUsage() {
+	o.usageCount.Store(0)
+}
 
 // testAllocator creates a new TestObject for the pool
 func testAllocator() *TestObject {
@@ -186,4 +212,59 @@ func TestPoolClose(t *testing.T) {
 			t.Errorf("Active() = %d, want 0 after Close()", pool.Active())
 		}
 	})
+}
+
+func TestPoolCleanupUsageCount(t *testing.T) {
+	// Configure pool with cleanup enabled
+	cfg := DefaultConfig(testAllocator, testCleaner)
+	cfg.Cleanup.Enabled = true
+	cfg.Cleanup.Interval = 100 * time.Millisecond // Short interval for testing
+	cfg.Cleanup.MinUsageCount = 2                 // Objects used less than 2 times will be cleaned
+	cfg.Cleanup.TargetSize = 0                    // No target size limit
+
+	pool, err := NewPoolWithConfig(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+
+	// Create and return objects with different usage counts
+	obj1, err := pool.RetrieveOrCreate() // Will be used once
+	if err != nil {
+		t.Errorf("RetrieveOrCreate() error = %v", err)
+	}
+	obj2, err := pool.RetrieveOrCreate() // Will be used twice
+	if err != nil {
+		t.Errorf("RetrieveOrCreate() error = %v", err)
+	}
+	obj3, err := pool.RetrieveOrCreate() // Will be used twice
+	if err != nil {
+		t.Errorf("RetrieveOrCreate() error = %v", err)
+	}
+
+	// Use obj2 and obj3 twice
+	pool.Put(obj2)
+	obj2, err = pool.RetrieveOrCreate()
+	if err != nil {
+		t.Errorf("RetrieveOrCreate() error = %v", err)
+	}
+
+	pool.Put(obj3)
+	obj3, err = pool.RetrieveOrCreate()
+	if err != nil {
+		t.Errorf("RetrieveOrCreate() error = %v", err)
+	}
+
+	// Return all objects to pool
+	pool.Put(obj1)
+	pool.Put(obj2)
+	pool.Put(obj3)
+
+	// Wait for cleanup to run
+	time.Sleep(1 * time.Second)
+
+	// Verify pool state
+	if pool.Size() != 0 {
+		t.Errorf("Size() = %d, want 0 (obj1 should be cleaned)", pool.Size())
+	}
 }
