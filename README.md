@@ -1,4 +1,5 @@
 # Minimal Object Pool
+
 ![Build](https://github.com/AlexsanderHamir/GenPool/actions/workflows/test.yml/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/AlexsanderHamir/GenPool/badge.png?branch=main)](https://coveralls.io/github/AlexsanderHamir/GenPool?branch=main)
 [![Go Report Card](https://goreportcard.com/badge/github.com/AlexsanderHamir/GenPool)](https://goreportcard.com/report/github.com/AlexsanderHamir/GenPool)
@@ -7,10 +8,7 @@
 ![Issues](https://img.shields.io/github/issues/AlexsanderHamir/GenPool)
 ![Last Commit](https://img.shields.io/github/last-commit/AlexsanderHamir/GenPool)
 ![Code Size](https://img.shields.io/github/languages/code-size/AlexsanderHamir/GenPool)
-
-
-
-
+![Version](https://img.shields.io/github/v/tag/AlexsanderHamir/GenPool?sort=semver)
 
 A lightweight, type-safe object pool implementation in Go. This pool implementation aims to be minimalistic, it uses an atomic linked list to get the job done.
 
@@ -137,3 +135,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Versioning
+
+This project follows [Semantic Versioning](https://semver.org/). For the versions available, see the [tags on this repository](https://github.com/AlexsanderHamir/GenPool/tags).
