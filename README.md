@@ -191,10 +191,10 @@ Function type for resetting objects to their initial state.
 
 #### Object Management
 
-- `RetrieveOrCreate() (T, error)`
+- `RetrieveOrCreate() T`
 
   - Gets an object from the pool or creates a new one
-  - Returns error if pool is closed or at hard limit
+  - Returns error nil pool is closed or at hard limit
 
 - `Put(obj T)`
   - Returns an object to the pool
