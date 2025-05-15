@@ -10,14 +10,16 @@ import (
 
 // BenchmarkObject is a simple struct we'll use for benchmarking
 type BenchmarkObject struct {
-	Value int
-	Data  []byte
+	Name string
+	Data []byte
 
 	next       atomic.Value
 	usageCount atomic.Int64
 }
 
 func performWorkload(obj *BenchmarkObject) {
+	obj.Name = "test"
+
 	// Simulate CPU-intensive work
 	for range 1000 {
 		obj.Data = append(obj.Data, byte(rand.Intn(256)))
@@ -52,11 +54,11 @@ func (o *BenchmarkObject) ResetUsage() {
 
 // Helper functions for benchmarks
 func newBenchmarkObject() *BenchmarkObject {
-	return &BenchmarkObject{Value: 42}
+	return &BenchmarkObject{Name: "test"}
 }
 
 func cleanBenchmarkObject(obj *BenchmarkObject) {
-	obj.Value = 0
+	obj.Name = ""
 	obj.Data = obj.Data[:0]
 }
 
@@ -65,7 +67,7 @@ func cleanBenchmarkObject(obj *BenchmarkObject) {
 func BenchmarkGetPutOurPool(b *testing.B) {
 	cfg := PoolConfig[*BenchmarkObject]{
 		Allocator: func() *BenchmarkObject {
-			return &BenchmarkObject{Value: 42}
+			return &BenchmarkObject{Name: "test"}
 		},
 		Cleaner: cleanBenchmarkObject,
 	}
@@ -114,7 +116,7 @@ func BenchmarkGetPutSyncPool(b *testing.B) {
 
 			performWorkload(obj)
 
-			obj.Value = 0
+			obj.Name = ""
 			obj.Data = obj.Data[:0]
 
 			pool.Put(obj)
