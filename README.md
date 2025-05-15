@@ -42,13 +42,13 @@ import (
 // Your Object must implemen the Poolable interface
 type BenchmarkObject struct {
     // your fields
-	Value      int
+    Value      int
     Name       string
 
 
     // must add these fields
-	next       atomic.Value
-	usageCount atomic.Int64
+    next       atomic.Value
+    usageCount atomic.Int64
 }
 
 func (o *BenchmarkObject) GetNext() Poolable {
