@@ -1,7 +1,7 @@
 # Minimal Object Pool
 
 ![Build](https://github.com/AlexsanderHamir/GenPool/actions/workflows/test.yml/badge.svg)
-[![Coverage Status](https://coveralls.io/repos/github/AlexsanderHamir/GenPool/badge.png?branch=main)](https://coveralls.io/github/AlexsanderHamir/GenPool?branch=main)
+[![Coverage Status](https://coveralls.io/repos/github/AlexsanderHamir/GenPool/badge.svg?branch=main)](https://coveralls.io/github/AlexsanderHamir/GenPool?branch=main)
 [![Go Report Card](https://goreportcard.com/badge/github.com/AlexsanderHamir/GenPool)](https://goreportcard.com/report/github.com/AlexsanderHamir/GenPool)
 [![Go Reference](https://pkg.go.dev/badge/github.com/AlexsanderHamir/GenPool.svg)](https://pkg.go.dev/github.com/AlexsanderHamir/GenPool)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -18,7 +18,7 @@ A lightweight, type-safe object pool implementation in Go. This pool implementat
 - ⚡ Lock-free operations using atomic operations
 - 🔄 Automatic cleanup of unused objects (configurable)
 - 📊 Usage tracking for intelligent object eviction
-- 🛡️ Hard limit enforcement to prevent memory leaks
+- 🛡️ Hard limit enforcement to prevent memory explosion
 - 🎯 Thread-safe operations
 
 ## Installation
@@ -39,7 +39,7 @@ import (
     "github.com/AlexsanderHamir/GenPool/pool"
 )
 
-// Your Object must implemen the Poolable interface
+// Your Object must implement the Poolable interface
 type BenchmarkObject struct {
     // your fields
     Value      int
