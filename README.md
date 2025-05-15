@@ -124,6 +124,118 @@ func main() {
 }
 ```
 
+## API Reference
+
+### Core Types
+
+#### Pool[T Poolable]
+
+The main pool type that manages object lifecycle and provides thread-safe operations.
+
+#### PoolConfig[T Poolable]
+
+Configuration struct for customizing pool behavior:
+
+```go
+type PoolConfig[T Poolable] struct {
+    HardLimit int           // Maximum number of objects allowed in the pool
+    Cleanup   CleanupPolicy // Cleanup configuration
+    Allocator Allocator[T]  // Function to create new objects
+    Cleaner   Cleaner[T]    // Function to reset objects
+}
+```
+
+#### CleanupPolicy
+
+Controls the pool's cleanup behavior:
+
+```go
+type CleanupPolicy struct {
+    Enabled       bool          // Whether cleanup is enabled
+    Interval      time.Duration // How often cleanup runs
+    MinUsageCount int64        // Minimum usage count before eviction
+    TargetSize    int          // Target pool size after cleanup
+}
+```
+
+### Function Types
+
+#### Allocator[T]
+
+```go
+type Allocator[T Poolable] func() T
+```
+
+Function type for creating new objects. Must return a new instance of the pooled type.
+
+#### Cleaner[T]
+
+```go
+type Cleaner[T Poolable] func(T)
+```
+
+Function type for resetting objects to their initial state.
+
+### Pool Methods
+
+#### Creation
+
+- `NewPool[T Poolable](allocator Allocator[T], cleaner Cleaner[T]) (*Pool[T], error)`
+
+  - Creates a new pool with default configuration
+  - Returns error if allocator or cleaner is nil
+
+- `NewPoolWithConfig[T Poolable](config PoolConfig[T]) (*Pool[T], error)`
+  - Creates a new pool with custom configuration
+  - Returns error if configuration is invalid
+
+#### Object Management
+
+- `RetrieveOrCreate() (T, error)`
+
+  - Gets an object from the pool or creates a new one
+  - Returns error if pool is closed or at hard limit
+
+- `Put(obj T)`
+  - Returns an object to the pool
+  - No-op if pool is closed
+
+#### Pool Information
+
+- `Size() int`
+
+  - Returns current number of objects in the pool
+
+- `Active() int`
+  - Returns number of objects currently in use
+
+#### Pool Control
+
+- `Clear()`
+
+  - Removes all objects from the pool
+  - Objects are not cleaned up, just removed from pool
+
+- `Close()`
+  - Stops cleanup goroutine and clears the pool
+  - Should be called when pool is no longer needed
+
+### Interface Requirements
+
+#### Poolable
+
+Objects stored in the pool must implement this interface:
+
+```go
+type Poolable interface {
+    GetNext() Poolable
+    SetNext(Poolable)
+    GetUsageCount() int64
+    IncrementUsage()
+    ResetUsage()
+}
+```
+
 ## Advanced Configuration
 
 The pool can be configured with custom settings:
@@ -143,27 +255,6 @@ config := pool.PoolConfig[*MyObject]{
 
 pool, err := pool.NewPoolWithConfig(config)
 ```
-
-## API Reference
-
-### Main Types
-
-- `Pool[T Poolable]`: The main pool type
-- `PoolConfig[T Poolable]`: Configuration for the pool
-- `CleanupPolicy`: Configuration for cleanup behavior
-- `Allocator[T]`: Function type for creating new objects
-- `Cleaner[T]`: Function type for cleaning objects
-
-### Key Methods
-
-- `NewPool[T]`: Create a new pool with default configuration
-- `NewPoolWithConfig[T]`: Create a pool with custom configuration
-- `RetrieveOrCreate()`: Get an object from the pool or create new using the provided allocator
-- `Put(T)`: Return an object to the pool
-- `Size()`: Get current pool size
-- `Active()`: Get number of active objects
-- `Clear()`: Remove all objects from pool
-- `Close()`: Stop cleanup and clear pool
 
 ## Contributing
 
