@@ -36,34 +36,55 @@ package main
 
 import (
     "fmt"
-    "github.com/AlexsanderHamir/GenPool/internal"
+    "github.com/AlexsanderHamir/GenPool/pool"
 )
 
 // Your Object must implemen the Poolable interface
-type MyObject struct {
-    // include:
-    next       internal.Poolable
-    usageCount int64
+type BenchmarkObject struct {
+    // your fields
+	Value      int
+    Name       string
 
-    // ... your object fields
+
+    // must add these fields
+	next       atomic.Value
+	usageCount atomic.Int64
 }
 
-func (o *MyObject) GetNext() internal.Poolable     { return o.next }
-func (o *MyObject) SetNext(next internal.Poolable) { o.next = next }
-func (o *MyObject) GetUsageCount() int64          { return o.usageCount }
-func (o *MyObject) IncrementUsage()               { o.usageCount++ }
-func (o *MyObject) ResetUsage()                   { o.usageCount = 0 }
+func (o *BenchmarkObject) GetNext() Poolable {
+	if next := o.next.Load(); next != nil {
+		return next.(Poolable)
+	}
+	return nil
+}
+
+func (o *BenchmarkObject) SetNext(next Poolable) {
+	o.next.Store(next)
+}
+
+func (o *BenchmarkObject) GetUsageCount() int64 {
+	return o.usageCount.Load()
+}
+
+func (o *BenchmarkObject) IncrementUsage() {
+	o.usageCount.Add(1)
+}
+
+func (o *BenchmarkObject) ResetUsage() {
+	o.usageCount.Store(0)
+}
 
 func main() {
     // Create allocator and cleaner functions
-    allocator := func() *MyObject {
-        return &MyObject{} // Create new object
+    allocator := func() *BenchmarkObject {
+        return &BenchmarkObject{
+            Value: 0,
+        }
     }
 
-    cleaner := func(obj *MyObject) {
-        // Reset object state
-        obj.usageCount = 0
-        // ... clean other fields
+    cleaner := func(obj *BenchmarkObject) {
+        obj.Value = 0
+        obj.Name = ""
     }
 
     // Create pool with default configuration
@@ -79,11 +100,12 @@ func main() {
         panic(err)
     }
 
-    // Use the object
-    // ... do something with obj
+    benchmarkObj.Value = 42
+    benchmarkObj.Name = "Robert"
+
 
     // Return the object to the pool
-    pool.Put(obj)
+    pool.Put(benchmarkObj)
 }
 ```
 
@@ -92,9 +114,9 @@ func main() {
 The pool can be configured with custom settings:
 
 ```go
-config := internal.PoolConfig[*MyObject]{
+config := pool.PoolConfig[*MyObject]{
     HardLimit: 1000, // Maximum number of objects
-    Cleanup: internal.CleanupPolicy{
+    Cleanup: pool.CleanupPolicy{
         Enabled:       true,
         Interval:      5 * time.Minute,
         MinUsageCount: 10,
@@ -104,7 +126,7 @@ config := internal.PoolConfig[*MyObject]{
     Cleaner:   cleaner,
 }
 
-pool, err := internal.NewPoolWithConfig(config)
+pool, err := pool.NewPoolWithConfig(config)
 ```
 
 ## API Reference
