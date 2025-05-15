@@ -1,16 +1,30 @@
 package pool
 
 import (
+	"math/rand"
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 )
 
 // BenchmarkObject is a simple struct we'll use for benchmarking
 type BenchmarkObject struct {
-	Value      int
+	Value int
+	Data  []byte
+
 	next       atomic.Value
 	usageCount atomic.Int64
+}
+
+func performWorkload(obj *BenchmarkObject) {
+	// Simulate CPU-intensive work
+	for range 1000 {
+		obj.Data = append(obj.Data, byte(rand.Intn(256)))
+	}
+
+	// Simulate some I/O or network delay
+	time.Sleep(time.Microsecond * 100)
 }
 
 func (o *BenchmarkObject) GetNext() Poolable {
@@ -43,20 +57,11 @@ func newBenchmarkObject() *BenchmarkObject {
 
 func cleanBenchmarkObject(obj *BenchmarkObject) {
 	obj.Value = 0
-}
-
-func doHeavyWork(obj *BenchmarkObject) {
-	for range 1000 {
-		obj.Value = (obj.Value*31 + 17) % 1000
-		if obj.Value%2 == 0 {
-			obj.Value = obj.Value * 2
-		} else {
-			obj.Value = obj.Value * 3
-		}
-	}
+	obj.Data = obj.Data[:0]
 }
 
 // BenchmarkGetPutOurPool benchmarks basic Get/Put operations for our pool implementation
+// go test -run=^$ -bench=^BenchmarkGetPutOurPool$ -benchmem -cpuprofile=cpu.out -memprofile=mem.out -trace=trace.out -mutexprofile=mutex.out
 func BenchmarkGetPutOurPool(b *testing.B) {
 	cfg := PoolConfig[*BenchmarkObject]{
 		Allocator: func() *BenchmarkObject {
@@ -81,8 +86,7 @@ func BenchmarkGetPutOurPool(b *testing.B) {
 				b.Fatal("obj is nil")
 			}
 
-			// Do some heavy work
-			doHeavyWork(obj)
+			performWorkload(obj)
 
 			pool.Put(obj)
 		}
@@ -90,6 +94,7 @@ func BenchmarkGetPutOurPool(b *testing.B) {
 }
 
 // BenchmarkGetPutSyncPool benchmarks basic Get/Put operations for sync.Pool
+// go test -run=^$ -bench=^BenchmarkGetPutSyncPool$ -benchmem -cpuprofile=cpu.out -memprofile=mem.out -trace=trace.out -mutexprofile=mutex.out
 func BenchmarkGetPutSyncPool(b *testing.B) {
 	pool := &sync.Pool{
 		New: func() any {
@@ -107,9 +112,11 @@ func BenchmarkGetPutSyncPool(b *testing.B) {
 				b.Fatal("obj is nil")
 			}
 
-			doHeavyWork(obj)
+			performWorkload(obj)
 
 			obj.Value = 0
+			obj.Data = obj.Data[:0]
+
 			pool.Put(obj)
 		}
 	})

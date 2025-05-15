@@ -15,8 +15,8 @@ A lightweight, type-safe object pool implementation in Go. This pool implementat
 ## GenPool vs sync.Pool
 
 ```
-BenchmarkGetPutOurPool-8         1111809              1087 ns/op               0 B/op          0 allocs/op
-BenchmarkGetPutSyncPool-8        1140043              1079 ns/op               0 B/op          0 allocs/op
+BenchmarkGetPutOurPool          725161              1641 ns/op               6 B/op          0 allocs/op
+BenchmarkGetPutSyncPool         732304              1623 ns/op               4 B/op          0 allocs/op
 ```
 
 ## Features
