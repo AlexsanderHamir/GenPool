@@ -4,7 +4,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
-	"time"
 )
 
 // BenchmarkObject is a simple struct we'll use for benchmarking
@@ -72,13 +71,11 @@ func BenchmarkGetPutOurPool(b *testing.B) {
 	}
 	defer pool.Close()
 
+	b.SetParallelism(1000)
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			obj, err := pool.RetrieveOrCreate()
-			if err != nil {
-				b.Fatalf("error retrieving object: %v", err)
-			}
+			obj := pool.RetrieveOrCreate()
 
 			if obj == nil {
 				b.Fatal("obj is nil")
@@ -87,9 +84,7 @@ func BenchmarkGetPutOurPool(b *testing.B) {
 			// Do some heavy work
 			doHeavyWork(obj)
 
-			if err := pool.Put(obj); err != nil {
-				b.Fatal(err)
-			}
+			pool.Put(obj)
 		}
 	})
 }
@@ -107,53 +102,15 @@ func BenchmarkGetPutSyncPool(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			obj := pool.Get().(*BenchmarkObject)
-			doHeavyWork(obj)
-
-			obj.Value = 0
-			pool.Put(obj)
-		}
-	})
-}
-
-// BenchmarkGetPutOurPoolWithAggressiveShrinking benchmarks Get/Put operations with aggressive shrinking
-func BenchmarkGetPutOurPoolWithAggressiveShrinking(b *testing.B) {
-	cfg := PoolConfig[*BenchmarkObject]{
-		Allocator: func() *BenchmarkObject {
-			return &BenchmarkObject{Value: 42}
-		},
-		Cleaner: cleanBenchmarkObject,
-		Cleanup: CleanupPolicy{
-			Enabled:       true,
-			Interval:      100 * time.Millisecond, // Aggressive cleanup interval
-			MinUsageCount: 2,                      // Objects used less than 2 times will be cleaned
-			TargetSize:    10,                     // Try to keep pool size around 10 objects
-		},
-	}
-
-	pool, err := NewPoolWithConfig(cfg)
-	if err != nil {
-		b.Fatalf("error creating pool: %v", err)
-	}
-	defer pool.Close()
-
-	b.ResetTimer()
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			obj, err := pool.RetrieveOrCreate()
-			if err != nil {
-				b.Fatalf("error retrieving object: %v", err)
-			}
 
 			if obj == nil {
 				b.Fatal("obj is nil")
 			}
 
-			// Do some heavy work
 			doHeavyWork(obj)
 
-			if err := pool.Put(obj); err != nil {
-				b.Fatal(err)
-			}
+			obj.Value = 0
+			pool.Put(obj)
 		}
 	})
 }

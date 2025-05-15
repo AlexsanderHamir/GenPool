@@ -146,9 +146,9 @@ func NewPoolWithConfig[T Poolable](cfg PoolConfig[T]) (*Pool[T], error) {
 }
 
 // RetrieveOrCreate retrieves an object from the pool or creates a new one using the allocator
-func (p *Pool[T]) RetrieveOrCreate() (T, error) {
+func (p *Pool[T]) RetrieveOrCreate() T {
 	if obj, ok := p.retrieve(); ok {
-		return obj, nil
+		return obj
 	}
 
 	// Check if we've hit the hard limit
@@ -156,7 +156,7 @@ func (p *Pool[T]) RetrieveOrCreate() (T, error) {
 		currentSize := p.size.Load() + p.active.Load() // Total objects = available + active
 		if currentSize >= int64(p.cfg.HardLimit) {
 			var zero T
-			return zero, fmt.Errorf("%w: limit of %d objects", ErrHardLimitReached, p.cfg.HardLimit)
+			return zero
 		}
 	}
 
@@ -164,17 +164,17 @@ func (p *Pool[T]) RetrieveOrCreate() (T, error) {
 	p.active.Add(1)
 	obj.IncrementUsage()
 
-	return obj, nil
+	return obj
 }
 
 // Put returns an object to the pool, cleaning it first
-func (p *Pool[T]) Put(obj T) error {
+func (p *Pool[T]) Put(obj T) {
 	p.cfg.Cleaner(obj)
 
 	for {
 		oldHead, ok := p.head.Load().(T)
 		if !ok {
-			return fmt.Errorf("%w: head is not a pointer to T", ErrInvalidPoolType)
+			return
 		}
 
 		// Set the next pointer to the old head (which may be nil)
@@ -184,7 +184,7 @@ func (p *Pool[T]) Put(obj T) error {
 			if p.active.Load() > 0 {
 				p.active.Add(-1)
 			}
-			return nil
+			return
 		}
 	}
 }

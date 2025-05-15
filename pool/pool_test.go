@@ -105,11 +105,7 @@ func TestPoolRetrieveOrCreate(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		obj, err := pool.RetrieveOrCreate()
-		if err != nil {
-			t.Errorf("RetrieveOrCreate() error = %v, want nil", err)
-		}
-
+		obj := pool.RetrieveOrCreate()
 		if obj == nil {
 			t.Error("RetrieveOrCreate() returned nil object")
 			return
@@ -132,22 +128,20 @@ func TestPoolRetrieveOrCreate(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		obj1, err := pool.RetrieveOrCreate()
-		if err != nil {
+		obj1 := pool.RetrieveOrCreate()
+		if obj1 == nil {
 			t.Errorf("First RetrieveOrCreate() error = %v, want nil", err)
 		}
 
-		_, err = pool.RetrieveOrCreate()
-		if !errors.Is(err, ErrHardLimitReached) {
-			t.Errorf("Second RetrieveOrCreate() error = %v, want %v", err, ErrHardLimitReached)
+		obj2 := pool.RetrieveOrCreate()
+		if obj2 != nil {
+			t.Errorf("Second RetrieveOrCreate() error = %v, want nil", err)
 		}
 
-		if err := pool.Put(obj1); err != nil {
-			t.Errorf("Put() error = %v, want nil", err)
-		}
+		pool.Put(obj1)
 
-		obj2, err := pool.RetrieveOrCreate()
-		if err != nil {
+		obj2 = pool.RetrieveOrCreate()
+		if obj2 == nil {
 			t.Errorf("Third RetrieveOrCreate() error = %v, want nil", err)
 		}
 		if obj2 == nil {
@@ -172,17 +166,14 @@ func TestPoolConcurrent(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for range iterations {
-				obj, err := pool.RetrieveOrCreate()
-				if err != nil {
+				obj := pool.RetrieveOrCreate()
+				if obj == nil {
 					t.Errorf("RetrieveOrCreate() error = %v", err)
 					return
 				}
 				time.Sleep(time.Millisecond)
 
-				if err := pool.Put(obj); err != nil {
-					t.Errorf("Put() error = %v", err)
-					return
-				}
+				pool.Put(obj)
 			}
 		}()
 	}
@@ -229,29 +220,29 @@ func TestPoolCleanupUsageCount(t *testing.T) {
 	defer pool.Close()
 
 	// Create and return objects with different usage counts
-	obj1, err := pool.RetrieveOrCreate() // Will be used once
-	if err != nil {
+	obj1 := pool.RetrieveOrCreate() // Will be used once
+	if obj1 == nil {
 		t.Errorf("RetrieveOrCreate() error = %v", err)
 	}
-	obj2, err := pool.RetrieveOrCreate() // Will be used twice
-	if err != nil {
+	obj2 := pool.RetrieveOrCreate() // Will be used twice
+	if obj2 == nil {
 		t.Errorf("RetrieveOrCreate() error = %v", err)
 	}
-	obj3, err := pool.RetrieveOrCreate() // Will be used twice
-	if err != nil {
+	obj3 := pool.RetrieveOrCreate() // Will be used twice
+	if obj3 == nil {
 		t.Errorf("RetrieveOrCreate() error = %v", err)
 	}
 
 	// Use obj2 and obj3 twice
 	pool.Put(obj2)
-	obj2, err = pool.RetrieveOrCreate()
-	if err != nil {
+	obj2 = pool.RetrieveOrCreate()
+	if obj2 == nil {
 		t.Errorf("RetrieveOrCreate() error = %v", err)
 	}
 
 	pool.Put(obj3)
-	obj3, err = pool.RetrieveOrCreate()
-	if err != nil {
+	obj3 = pool.RetrieveOrCreate()
+	if obj3 == nil {
 		t.Errorf("RetrieveOrCreate() error = %v", err)
 	}
 
