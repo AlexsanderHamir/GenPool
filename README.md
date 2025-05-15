@@ -28,6 +28,13 @@ BenchmarkGetPutSyncPool-8        1140043              1079 ns/op               0
 - 🛡️ Hard limit enforcement to prevent memory explosion
 - 🎯 Thread-safe operations
 
+## References
+
+For detailed technical explanations and implementation details, please refer to the [docs](./docs) directory:
+
+- [Overall Design](./docs/overall_design.md) - Technical design and architecture overview
+- [Cleanup Mechanism](./docs/cleanup.md) - Details about the pool's cleanup and eviction policies
+
 ## Installation
 
 ```bash

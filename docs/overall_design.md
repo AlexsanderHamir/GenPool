@@ -1,6 +1,6 @@
 # Minimal Object Pool Design
 
-This object pool uses an atomic singly linked list built from the objects themselves to manage the pool efficiently, reducing indirection and allocations. Each object maintains a pointer to the next one using `atomic.Value`, allowing lock-free access and updates.
+This object pool uses an atomic singly linked list built from the provided objects themselves to manage the pool efficiently, reducing indirection and allocations. Each object maintains a pointer to the next one using `atomic.Value`, allowing lock-free access and updates.
 
 The primary advantage of this approach is that it supports **efficient dynamic resizing** (growing and shrinking) of the pool without relying on locks or centralized data structures. Although the use of pointers and atomics sacrifices **some cache locality** compared to slice-based or array-backed pools, it still results in better throughput under concurrent access patterns, particularly in **high-contention environments**.
 
