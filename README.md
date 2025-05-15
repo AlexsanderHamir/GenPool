@@ -12,6 +12,13 @@
 
 A lightweight, type-safe object pool implementation in Go. This pool implementation aims to be minimalistic, it uses an atomic linked list to get the job done.
 
+## GenPool vs sync.Pool
+
+```
+BenchmarkGetPutOurPool-8         1111809              1087 ns/op               0 B/op          0 allocs/op
+BenchmarkGetPutSyncPool-8        1140043              1079 ns/op               0 B/op          0 allocs/op
+```
+
 ## Features
 
 - 🔒 Type-safe implementation using Go generics
@@ -45,47 +52,48 @@ type BenchmarkObject struct {
     Value      int
     Name       string
 
-
     // must add these fields
     next       atomic.Value
     usageCount atomic.Int64
 }
 
 func (o *BenchmarkObject) GetNext() Poolable {
-	if next := o.next.Load(); next != nil {
-		return next.(Poolable)
-	}
-	return nil
+    if next := o.next.Load(); next != nil {
+        return next.(Poolable)
+    }
+    return nil
 }
 
 func (o *BenchmarkObject) SetNext(next Poolable) {
-	o.next.Store(next)
+    o.next.Store(next)
 }
 
 func (o *BenchmarkObject) GetUsageCount() int64 {
-	return o.usageCount.Load()
+    return o.usageCount.Load()
 }
 
 func (o *BenchmarkObject) IncrementUsage() {
-	o.usageCount.Add(1)
+    o.usageCount.Add(1)
 }
 
 func (o *BenchmarkObject) ResetUsage() {
-	o.usageCount.Store(0)
+    o.usageCount.Store(0)
 }
 
 func main() {
-    // Create allocator and cleaner functions
-    allocator := func() *BenchmarkObject {
+    // Create allocator function for new objects
+    allocator := pool.Allocator[*BenchmarkObject](func() *BenchmarkObject {
         return &BenchmarkObject{
             Value: 0,
+            Name:  "",
         }
-    }
+    })
 
-    cleaner := func(obj *BenchmarkObject) {
+    // Create cleaner function for resetting objects
+    cleaner := pool.Cleaner[*BenchmarkObject](func(obj *BenchmarkObject) {
         obj.Value = 0
         obj.Name = ""
-    }
+    })
 
     // Create pool with default configuration
     pool, err := internal.NewPool(allocator, cleaner)
@@ -100,12 +108,12 @@ func main() {
         panic(err)
     }
 
-    benchmarkObj.Value = 42
-    benchmarkObj.Name = "Robert"
-
+    // Use the object
+    obj.Value = 42
+    obj.Name = "Robert"
 
     // Return the object to the pool
-    pool.Put(benchmarkObj)
+    pool.Put(obj)
 }
 ```
 
