@@ -3,7 +3,6 @@
 ![Build](https://github.com/AlexsanderHamir/GenPool/actions/workflows/test.yml/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/AlexsanderHamir/GenPool/badge.svg?branch=main)](https://coveralls.io/github/AlexsanderHamir/GenPool?branch=main)
 [![Go Report Card](https://goreportcard.com/badge/github.com/AlexsanderHamir/GenPool)](https://goreportcard.com/report/github.com/AlexsanderHamir/GenPool)
-[![Go Reference](https://pkg.go.dev/badge/github.com/AlexsanderHamir/GenPool.svg)](https://pkg.go.dev/github.com/AlexsanderHamir/GenPool)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ![Issues](https://img.shields.io/github/issues/AlexsanderHamir/GenPool)
 ![Last Commit](https://img.shields.io/github/last-commit/AlexsanderHamir/GenPool)
@@ -191,10 +190,10 @@ Function type for resetting objects to their initial state.
 
 #### Object Management
 
-- `RetrieveOrCreate() (T, error)`
+- `RetrieveOrCreate() T`
 
   - Gets an object from the pool or creates a new one
-  - Returns error if pool is closed or at hard limit
+  - Returns error nil pool is closed or at hard limit
 
 - `Put(obj T)`
   - Returns an object to the pool
