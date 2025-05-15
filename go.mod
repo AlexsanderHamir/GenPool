@@ -1,3 +1,3 @@
 module github.com/AlexsanderHamir/GenPool
 
-go 1.22.1
+go 1.23.4
