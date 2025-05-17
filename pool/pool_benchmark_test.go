@@ -63,7 +63,7 @@ func cleanBenchmarkObject(obj *BenchmarkObject) {
 }
 
 // BenchmarkPool benchmarks basic Get/Put operations for our pool implementation
-// go test -run=^$ -bench=^BenchmarkGenPool$ -benchmem -cpuprofile=cpu.out -memprofile=mem.out -trace=trace.out -mutexprofile=mutex.out
+// go test -run=^$ -bench=^BenchmarkGenPool$ -benchmem -count=20 -cpuprofile=cpu.out -memprofile=mem.out -trace=trace.out -mutexprofile=mutex.out
 func BenchmarkGenPool(b *testing.B) {
 	cfg := PoolConfig[*BenchmarkObject]{
 		Allocator: newBenchmarkObject,

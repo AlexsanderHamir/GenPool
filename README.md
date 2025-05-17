@@ -1,5 +1,8 @@
 # Minimal Object Pool
 
+A production-ready, lock-free object pool implementation in Go that provides efficient object reuse, automatic cleanup, and type safety through generics. Perfect for high-performance applications, game development, and resource-intensive systems.
+
+[![GoDoc](https://godoc.org/github.com/AlexsanderHamir/GenPool?status.svg)](https://godoc.org/github.com/AlexsanderHamir/GenPool)
 ![Build](https://github.com/AlexsanderHamir/GenPool/actions/workflows/test.yml/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/AlexsanderHamir/GenPool/badge.svg?branch=main)](https://coveralls.io/github/AlexsanderHamir/GenPool?branch=main)
 [![Go Report Card](https://goreportcard.com/badge/github.com/AlexsanderHamir/GenPool)](https://goreportcard.com/report/github.com/AlexsanderHamir/GenPool)
@@ -8,15 +11,50 @@
 ![Last Commit](https://img.shields.io/github/last-commit/AlexsanderHamir/GenPool)
 ![Code Size](https://img.shields.io/github/languages/code-size/AlexsanderHamir/GenPool)
 ![Version](https://img.shields.io/github/v/tag/AlexsanderHamir/GenPool?sort=semver)
+![Go Version](https://img.shields.io/badge/Go-1.18%2B-blue)
 
-A lightweight, type-safe object pool implementation in Go. This pool implementation aims to be minimalistic, it uses an atomic linked list to get the job done.
+## Table of Contents
 
-## GenPool vs sync.Pool
+- [Overview](#overview)
+- [Performance](#performance)
+- [Why Use GenPool?](#why-use-genpool)
+- [Features](#features)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Use Cases](#use-cases)
+- [API Reference](#api-reference)
+- [Configuration](#configuration)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Overview
+
+GenPool is a high-performance object pool implementation for Go that helps reduce memory allocations and garbage collection pressure. It's designed for applications that frequently create and destroy objects, such as:
+
+- Web servers handling high concurrent loads
+- Game development with frequent object instantiation
+- Database connection pooling
+- Resource-intensive applications
+- High-frequency trading systems
+
+## Why Use GenPool?
+
+- **Lightweight**: Just 199 lines of code, with ongoing efforts to simplify and optimize further
+- **Type Safety**: Leverages Go generics for compile-time type checking
+- **Zero Dependencies**: Pure Go implementation with no external dependencies
+
+## Performance
+
+**GenPool** is built for high-throughput, low-latency use cases. Below is a comparison with Go's `sync.Pool`, which is tightly integrated with the runtime and optimized for short-lived object reuse:
 
 ```
-BenchmarkSyncPool        760000              1579 ns/op               3.9 B/op        0 allocs/op
-BenchmarkGenPool         742288              1620 ns/op               3 B/op          0 allocs/op
+BenchmarkSyncPool        670000              1575 ns/op               3.7 B/op        0 allocs/op
+BenchmarkGenPool         644000              1616 ns/op               4.6 B/op        0 allocs/op
 ```
+
+- **Throughput**: GenPool is within 4% of `sync.Pool` in ops/sec
+- **Latency**: ~2.6% slower per operation
+- **Allocations**: Zero allocations in both cases
 
 ## Features
 
@@ -236,3 +274,76 @@ cleaner := Cleaner[*MyObject](func(obj *MyObject) {
     // Reset other fields to their initial state...
 })
 ```
+
+## Use Cases
+
+### 1. Database Connection Pooling
+
+```go
+type DBConnection struct {
+    conn *sql.DB
+    // ... poolable fields
+}
+
+pool, _ := NewPool(
+    Allocator[*DBConnection](func() *DBConnection {
+        return &DBConnection{conn: createNewConnection()}
+    }),
+    Cleaner[*DBConnection](func(conn *DBConnection) {
+        conn.conn.Ping() // Verify connection health
+    }),
+)
+```
+
+### 2. Game Development
+
+```go
+type GameObject struct {
+    Position Vector3D
+    // ... poolable fields
+}
+
+pool, _ := NewPool(
+    Allocator[*GameObject](func() *GameObject {
+        return &GameObject{Position: Vector3D{0, 0, 0}}
+    }),
+    Cleaner[*GameObject](func(obj *GameObject) {
+        obj.Position = Vector3D{0, 0, 0}
+    }),
+)
+```
+
+### 3. HTTP Request Handling
+
+```go
+type RequestContext struct {
+    Headers map[string]string
+    // ... poolable fields
+}
+
+pool, _ := NewPool(
+    Allocator[*RequestContext](func() *RequestContext {
+        return &RequestContext{Headers: make(map[string]string)}
+    }),
+    Cleaner[*RequestContext](func(ctx *RequestContext) {
+        for k := range ctx.Headers {
+            delete(ctx.Headers, k)
+        }
+    }),
+)
+```
+
+## Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Support
+
+- 📚 [Documentation](https://godoc.org/github.com/AlexsanderHamir/GenPool)
+- 💬 [Discussions](https://github.com/AlexsanderHamir/GenPool/discussions)
+- 🐛 [Issue Tracker](https://github.com/AlexsanderHamir/GenPool/issues)
+- 📧 [Email Support](mailto:your-email@example.com)
