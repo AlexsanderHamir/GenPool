@@ -124,18 +124,39 @@ func main() {
 
 ## API Reference
 
-### Core Types
+Methods Available:
 
-#### Pool[T Poolable]
+```go
+// Core pool operations
+RetrieveOrCreate() (T, error)  // Gets an object from the pool or creates a new one
+Put(obj T)                     // Returns an object to the pool
+```
 
-The main pool type that manages object lifecycle and provides thread-safe operations.
+Example usage:
+
+```go
+pool, _ := internal.NewPool(allocator, cleaner)
+
+// Get an object
+obj, err := pool.RetrieveOrCreate()
+if err != nil {
+    // Handle error
+}
+
+// Use the object
+// ...
+
+// Return to pool
+pool.Put(obj)
+```
 
 #### PoolConfig[T Poolable]
 
-Configuration struct for customizing pool behavior:
+Configuration struct for customizing pool behavior. All have sensible defaults:
 
 ```go
 type PoolConfig[T Poolable] struct {
+    HardLimit int           // Maximum number of objects allowed in the pool
     Cleanup   CleanupPolicy // Cleanup configuration
     Allocator Allocator[T]  // Function to create new objects
     Cleaner   Cleaner[T]    // Function to reset objects
@@ -144,14 +165,37 @@ type PoolConfig[T Poolable] struct {
 
 #### CleanupPolicy
 
-Controls the pool's cleanup behavior:
+Controls the pool's cleanup behavior to prevent memory bloat and manage resource usage:
 
 ```go
 type CleanupPolicy struct {
-    Enabled       bool          // Whether cleanup is enabled
-    Interval      time.Duration // How often cleanup runs
-    MinUsageCount int64        // Minimum usage count before eviction
-    TargetSize    int          // Target pool size after cleanup
+    // Whether automatic cleanup is enabled
+    // Default: false
+    Enabled bool
+
+    // How often the cleanup routine runs
+    // Default: 5 minutes
+    Interval time.Duration
+
+    // Objects with usage count below this threshold
+    // may be evicted during cleanup
+    // Default: 5
+    MinUsageCount int64
+
+    // Target number of objects to maintain after cleanup
+    // Default: 50% of HardLimit
+    TargetSize int
+}
+```
+
+Example cleanup policy:
+
+```go
+cleanupPolicy := CleanupPolicy{
+    Enabled:       true,
+    Interval:      10 * time.Minute,
+    MinUsageCount: 20,
+    TargetSize:    200,
 }
 ```
 
@@ -159,14 +203,39 @@ type CleanupPolicy struct {
 
 #### Allocator[T]
 
+Function type for creating new objects. Must return a new instance of the pooled type.
+
 ```go
 type Allocator[T Poolable] func() T
 ```
 
-Function type for creating new objects. Must return a new instance of the pooled type.
+Example implementation:
+
+```go
+allocator := Allocator[*MyObject](func() *MyObject {
+    return &MyObject{
+        ID:    uuid.New(),
+        State: "new",
+        // Initialize other fields...
+    }
+})
+```
 
 #### Cleaner[T]
 
+Function type for resetting objects before they are returned to the pool. This helps ensure objects are in a clean state for the next use.
+
 ```go
 type Cleaner[T Poolable] func(T)
+```
+
+Example implementation:
+
+```go
+cleaner := Cleaner[*MyObject](func(obj *MyObject) {
+    obj.State = "clean"
+    obj.LastUsed = time.Time{}
+    obj.Buffer = nil
+    // Reset other fields to their initial state...
+})
 ```
