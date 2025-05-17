@@ -156,7 +156,6 @@ Configuration struct for customizing pool behavior. All have sensible defaults:
 
 ```go
 type PoolConfig[T Poolable] struct {
-    HardLimit int           // Maximum number of objects allowed in the pool
     Cleanup   CleanupPolicy // Cleanup configuration
     Allocator Allocator[T]  // Function to create new objects
     Cleaner   Cleaner[T]    // Function to reset objects
@@ -183,7 +182,6 @@ type CleanupPolicy struct {
     MinUsageCount int64
 
     // Target number of objects to maintain after cleanup
-    // Default: 50% of HardLimit
     TargetSize int
 }
 ```
