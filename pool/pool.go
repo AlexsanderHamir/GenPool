@@ -6,6 +6,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unsafe"
 )
 
 // Common errors that may be returned by the pool
@@ -95,10 +96,12 @@ func DefaultConfig[T Poolable](allocator Allocator[T], cleaner Cleaner[T]) PoolC
 }
 
 type Pool[T Poolable] struct {
-	head      atomic.Value // Stores T
-	cfg       PoolConfig[T]
+	head atomic.Value
+	_    [64 - unsafe.Sizeof(atomic.Value{})%64]byte
+
 	stopClean chan struct{}
 	cleanWg   sync.WaitGroup
+	cfg       PoolConfig[T]
 }
 
 // NewPool creates a new pool with default configuration
@@ -164,6 +167,7 @@ func (p *Pool[T]) RetrieveOrCreate() T {
 
 // Put returns an object to the pool, cleaning it first
 func (p *Pool[T]) Put(obj T) {
+	p.cfg.Cleaner(obj)
 
 	for {
 		oldHead, ok := p.head.Load().(T)
@@ -174,7 +178,6 @@ func (p *Pool[T]) Put(obj T) {
 		// Set the next pointer to the old head (which may be nil)
 		obj.SetNext(oldHead)
 		if p.head.CompareAndSwap(oldHead, obj) {
-			p.cfg.Cleaner(obj)
 			return
 		}
 	}

@@ -10,11 +10,14 @@ import (
 
 // BenchmarkObject is a simple struct we'll use for benchmarking
 type BenchmarkObject struct {
-	Name string
-	Data []byte
+	// user fields
+	Name string   // 16 bytes
+	Data []byte   // 24 bytes
+	_    [24]byte // 24 bytes = 64 bytes
 
-	next       atomic.Value
+	// interface necessary fields (kept together since they're modified together)
 	usageCount atomic.Int64
+	next       atomic.Value
 }
 
 func performWorkload(obj *BenchmarkObject) {
@@ -57,17 +60,17 @@ func newBenchmarkObject() *BenchmarkObject {
 	return &BenchmarkObject{Name: "test"}
 }
 
-func cleanBenchmarkObject(obj *BenchmarkObject) {
+func canBenchmarkObject(obj *BenchmarkObject) {
 	obj.Name = ""
 	obj.Data = obj.Data[:0]
 }
 
 // BenchmarkPool benchmarks basic Get/Put operations for our pool implementation
-// go test -run=^$ -bench=^BenchmarkGenPool$ -benchmem -count=20 -cpuprofile=cpu.out -memprofile=mem.out -trace=trace.out -mutexprofile=mutex.out
+// go test -run=^$ -bench=^BenchmarkGenPool$ -benchmem -count=50 -cpuprofile=cpu.out -memprofile=mem.out -trace=trace.out -mutexprofile=mutex.out
 func BenchmarkGenPool(b *testing.B) {
 	cfg := PoolConfig[*BenchmarkObject]{
 		Allocator: newBenchmarkObject,
-		Cleaner:   cleanBenchmarkObject,
+		Cleaner:   canBenchmarkObject,
 	}
 
 	pool, err := NewPoolWithConfig(cfg)
@@ -93,7 +96,7 @@ func BenchmarkGenPool(b *testing.B) {
 }
 
 // BenchmarkSyncPool benchmarks basic Get/Put operations for sync.Pool
-// go test -run=^$ -bench=^BenchmarkSyncPool$ -benchmem -cpuprofile=cpu.out -memprofile=mem.out -trace=trace.out -mutexprofile=mutex.out
+// go test -run=^$ -bench=^BenchmarkSyncPool$ -benchmem -count=50 -cpuprofile=cpu.out -memprofile=mem.out -trace=trace.out -mutexprofile=mutex.out
 func BenchmarkSyncPool(b *testing.B) {
 	pool := &sync.Pool{
 		New: func() any {
