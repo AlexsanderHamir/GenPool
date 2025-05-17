@@ -24,7 +24,6 @@ BenchmarkGenPool         742288              1620 ns/op               3 B/op    
 - ⚡ Lock-free operations using atomic operations
 - 🔄 Automatic cleanup of unused objects (configurable)
 - 📊 Usage tracking for intelligent object eviction
-- 🛡️ Hard limit enforcement to prevent memory explosion
 - 🎯 Thread-safe operations
 
 ## References
