@@ -14,8 +14,8 @@ A lightweight, type-safe object pool implementation in Go. This pool implementat
 ## GenPool vs sync.Pool
 
 ```
-BenchmarkGetPutOurPool          725624              1653 ns/op               7 B/op          0 allocs/op
-BenchmarkGetPutSyncPool         742288              1620 ns/op               3 B/op          0 allocs/op
+BenchmarkSyncPool        760000              1579 ns/op               3.9 B/op        0 allocs/op
+BenchmarkGetPool         742288              1620 ns/op               3 B/op          0 allocs/op
 ```
 
 ## Features
@@ -172,97 +172,3 @@ Function type for creating new objects. Must return a new instance of the pooled
 ```go
 type Cleaner[T Poolable] func(T)
 ```
-
-Function type for resetting objects to their initial state.
-
-### Pool Methods
-
-#### Creation
-
-- `NewPool[T Poolable](allocator Allocator[T], cleaner Cleaner[T]) (*Pool[T], error)`
-
-  - Creates a new pool with default configuration
-  - Returns error if allocator or cleaner is nil
-
-- `NewPoolWithConfig[T Poolable](config PoolConfig[T]) (*Pool[T], error)`
-  - Creates a new pool with custom configuration
-  - Returns error if configuration is invalid
-
-#### Object Management
-
-- `RetrieveOrCreate() T`
-
-  - Gets an object from the pool or creates a new one
-  - Returns error nil pool is closed or at hard limit
-
-- `Put(obj T)`
-  - Returns an object to the pool
-  - No-op if pool is closed
-
-#### Pool Information
-
-- `Size() int`
-
-  - Returns current number of objects in the pool
-
-- `Active() int`
-  - Returns number of objects currently in use
-
-#### Pool Control
-
-- `Clear()`
-
-  - Removes all objects from the pool
-  - Objects are not cleaned up, just removed from pool
-
-- `Close()`
-  - Stops cleanup goroutine and clears the pool
-  - Should be called when pool is no longer needed
-
-### Interface Requirements
-
-#### Poolable
-
-Objects stored in the pool must implement this interface:
-
-```go
-type Poolable interface {
-    GetNext() Poolable
-    SetNext(Poolable)
-    GetUsageCount() int64
-    IncrementUsage()
-    ResetUsage()
-}
-```
-
-## Advanced Configuration
-
-The pool can be configured with custom settings:
-
-```go
-config := pool.PoolConfig[*MyObject]{
-    HardLimit: 1000, // Maximum number of objects
-    Cleanup: pool.CleanupPolicy{
-        Enabled:       true,
-        Interval:      5 * time.Minute,
-        MinUsageCount: 10,
-        TargetSize:    100,
-    },
-    Allocator: allocator,
-    Cleaner:   cleaner,
-}
-
-pool, err := pool.NewPoolWithConfig(config)
-```
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Versioning
-
-This project follows [Semantic Versioning](https://semver.org/). For the versions available, see the [tags on this repository](https://github.com/AlexsanderHamir/GenPool/tags).

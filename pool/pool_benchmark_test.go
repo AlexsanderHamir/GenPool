@@ -62,21 +62,18 @@ func cleanBenchmarkObject(obj *BenchmarkObject) {
 	obj.Data = obj.Data[:0]
 }
 
-// BenchmarkGetPutOurPool benchmarks basic Get/Put operations for our pool implementation
-// go test -run=^$ -bench=^BenchmarkGetPutOurPool$ -benchmem -cpuprofile=cpu.out -memprofile=mem.out -trace=trace.out -mutexprofile=mutex.out
-func BenchmarkGetPutOurPool(b *testing.B) {
+// BenchmarkPool benchmarks basic Get/Put operations for our pool implementation
+// go test -run=^$ -bench=^BenchmarkGenPool$ -benchmem -cpuprofile=cpu.out -memprofile=mem.out -trace=trace.out -mutexprofile=mutex.out
+func BenchmarkGenPool(b *testing.B) {
 	cfg := PoolConfig[*BenchmarkObject]{
-		Allocator: func() *BenchmarkObject {
-			return &BenchmarkObject{Name: "test"}
-		},
-		Cleaner: cleanBenchmarkObject,
+		Allocator: newBenchmarkObject,
+		Cleaner:   cleanBenchmarkObject,
 	}
 
 	pool, err := NewPoolWithConfig(cfg)
 	if err != nil {
 		b.Fatalf("error creating pool: %v", err)
 	}
-	defer pool.Close()
 
 	b.SetParallelism(1000)
 	b.ResetTimer()
@@ -95,9 +92,9 @@ func BenchmarkGetPutOurPool(b *testing.B) {
 	})
 }
 
-// BenchmarkGetPutSyncPool benchmarks basic Get/Put operations for sync.Pool
-// go test -run=^$ -bench=^BenchmarkGetPutSyncPool$ -benchmem -cpuprofile=cpu.out -memprofile=mem.out -trace=trace.out -mutexprofile=mutex.out
-func BenchmarkGetPutSyncPool(b *testing.B) {
+// BenchmarkSyncPool benchmarks basic Get/Put operations for sync.Pool
+// go test -run=^$ -bench=^BenchmarkSyncPool$ -benchmem -cpuprofile=cpu.out -memprofile=mem.out -trace=trace.out -mutexprofile=mutex.out
+func BenchmarkSyncPool(b *testing.B) {
 	pool := &sync.Pool{
 		New: func() any {
 			return newBenchmarkObject()

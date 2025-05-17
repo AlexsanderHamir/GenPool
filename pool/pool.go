@@ -77,9 +77,6 @@ type Poolable interface {
 
 // PoolConfig holds configuration options for the pool
 type PoolConfig[T Poolable] struct {
-	// HardLimit is the maximum number of objects allowed in the pool.
-	// If set to 0, no limit is enforced.
-	HardLimit int
 	// Cleanup defines the cleanup policy for the pool
 	Cleanup CleanupPolicy
 	// Allocator is the function to create new objects
@@ -91,7 +88,6 @@ type PoolConfig[T Poolable] struct {
 // DefaultConfig returns a default pool configuration for type T
 func DefaultConfig[T Poolable](allocator Allocator[T], cleaner Cleaner[T]) PoolConfig[T] {
 	return PoolConfig[T]{
-		HardLimit: 0, // No limit by default
 		Cleanup:   DefaultCleanupPolicy(),
 		Allocator: allocator,
 		Cleaner:   cleaner,
@@ -100,12 +96,9 @@ func DefaultConfig[T Poolable](allocator Allocator[T], cleaner Cleaner[T]) PoolC
 
 type Pool[T Poolable] struct {
 	head      atomic.Value // Stores T
-	size      atomic.Int64
-	active    atomic.Int64 // Count of active (in-use) objects
 	cfg       PoolConfig[T]
 	stopClean chan struct{}
 	cleanWg   sync.WaitGroup
-	closed    atomic.Bool
 }
 
 // NewPool creates a new pool with default configuration
@@ -139,6 +132,18 @@ func NewPoolWithConfig[T Poolable](cfg PoolConfig[T]) (*Pool[T], error) {
 	p.head.Store(zero)
 
 	if cfg.Cleanup.Enabled {
+		if cfg.Cleanup.Interval <= 0 {
+			return nil, fmt.Errorf("%w: cleanup interval must be greater than 0", ErrInvalidPoolType)
+		}
+
+		if cfg.Cleanup.MinUsageCount < 0 {
+			return nil, fmt.Errorf("%w: minimum usage count must be greater than or equal to 0", ErrInvalidPoolType)
+		}
+
+		if cfg.Cleanup.TargetSize < 0 {
+			return nil, fmt.Errorf("%w: target size must be greater than or equal to 0", ErrInvalidPoolType)
+		}
+
 		p.startCleaner()
 	}
 
@@ -151,17 +156,7 @@ func (p *Pool[T]) RetrieveOrCreate() T {
 		return obj
 	}
 
-	// Check if we've hit the hard limit
-	if p.cfg.HardLimit > 0 {
-		currentSize := p.size.Load() + p.active.Load() // Total objects = available + active
-		if currentSize >= int64(p.cfg.HardLimit) {
-			var zero T
-			return zero
-		}
-	}
-
 	obj := p.cfg.Allocator()
-	p.active.Add(1)
 	obj.IncrementUsage()
 
 	return obj
@@ -169,7 +164,6 @@ func (p *Pool[T]) RetrieveOrCreate() T {
 
 // Put returns an object to the pool, cleaning it first
 func (p *Pool[T]) Put(obj T) {
-	p.cfg.Cleaner(obj)
 
 	for {
 		oldHead, ok := p.head.Load().(T)
@@ -180,18 +174,14 @@ func (p *Pool[T]) Put(obj T) {
 		// Set the next pointer to the old head (which may be nil)
 		obj.SetNext(oldHead)
 		if p.head.CompareAndSwap(oldHead, obj) {
-			p.size.Add(1)
-			if p.active.Load() > 0 {
-				p.active.Add(-1)
-			}
+			p.cfg.Cleaner(obj)
 			return
 		}
 	}
 }
 
 // retrieve retrieves a previously inserted object from the pool
-func (p *Pool[T]) retrieve() (T, bool) {
-	var zero T
+func (p *Pool[T]) retrieve() (zero T, success bool) {
 	for {
 		oldHead, ok := p.head.Load().(T)
 		if !ok {
@@ -204,23 +194,11 @@ func (p *Pool[T]) retrieve() (T, bool) {
 
 		next := oldHead.GetNext()
 		if p.head.CompareAndSwap(oldHead, next) {
-			p.active.Add(1)
-			p.size.Add(-1)
 			oldHead.SetNext(zero)
 			oldHead.IncrementUsage() // Track usage when object is retrieved
 			return oldHead, true
 		}
 	}
-}
-
-// Size returns the current number of objects in the pool
-func (p *Pool[T]) Size() int {
-	return int(p.size.Load())
-}
-
-// Active returns the number of objects currently in use
-func (p *Pool[T]) Active() int {
-	return int(p.active.Load())
 }
 
 // Clear removes all objects from the pool
@@ -236,27 +214,11 @@ func (p *Pool[T]) Clear() {
 			return
 		}
 		if p.head.CompareAndSwap(oldHead, zero) {
-			p.size.Store(0)
-			p.active.Store(0)
 			p.cfg.Cleaner(oldHead)
 			oldHead.SetNext(zero)
 			return
 		}
 	}
-}
-
-// Close stops the cleanup goroutine and clears the pool
-func (p *Pool[T]) Close() {
-	if p.closed.Load() {
-		return
-	}
-
-	if p.cfg.Cleanup.Enabled {
-		close(p.stopClean)
-		p.cleanWg.Wait()
-	}
-	p.Clear()
-	p.closed.Store(true)
 }
 
 // Config returns the current pool configuration
@@ -291,7 +253,6 @@ func (p *Pool[T]) cleanup() {
 
 	var current, prev T
 	var kept int
-	var removed int
 
 	// Start from the head of the pool
 	current, ok := p.head.Load().(T)
@@ -322,14 +283,8 @@ func (p *Pool[T]) cleanup() {
 			} else {
 				prev.SetNext(next)
 			}
-			if p.active.Load() > 0 {
-				p.active.Add(-1)
-			}
-			removed++
 		}
 
 		current = next.(T)
 	}
-
-	p.size.Store(int64(kept))
 }

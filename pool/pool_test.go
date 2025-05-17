@@ -114,39 +114,6 @@ func TestPoolRetrieveOrCreate(t *testing.T) {
 		if obj.ID != 1 || obj.Value != "test" {
 			t.Errorf("RetrieveOrCreate() got = %+v, want ID=1, Value=test", obj)
 		}
-
-		if pool.Active() != 1 {
-			t.Errorf("Active() = %d, want 1", pool.Active())
-		}
-	})
-
-	t.Run("hard limit", func(t *testing.T) {
-		cfg := DefaultConfig(testAllocator, testCleaner)
-		cfg.HardLimit = 1
-		pool, err := NewPoolWithConfig(cfg)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		obj1 := pool.RetrieveOrCreate()
-		if obj1 == nil {
-			t.Errorf("First RetrieveOrCreate() error = %v, want nil", err)
-		}
-
-		obj2 := pool.RetrieveOrCreate()
-		if obj2 != nil {
-			t.Errorf("Second RetrieveOrCreate() error = %v, want nil", err)
-		}
-
-		pool.Put(obj1)
-
-		obj2 = pool.RetrieveOrCreate()
-		if obj2 == nil {
-			t.Errorf("Third RetrieveOrCreate() error = %v, want nil", err)
-		}
-		if obj2 == nil {
-			t.Error("Third RetrieveOrCreate() returned nil object")
-		}
 	})
 }
 
@@ -179,30 +146,6 @@ func TestPoolConcurrent(t *testing.T) {
 	}
 
 	wg.Wait()
-
-	// Verify pool state
-	if pool.Active() != 0 {
-		t.Errorf("Active() = %d, want 0", pool.Active())
-	}
-}
-
-func TestPoolClose(t *testing.T) {
-	t.Run("basic close", func(t *testing.T) {
-		pool, err := NewPoolWithConfig(DefaultConfig(testAllocator, testCleaner))
-		if err != nil {
-			t.Fatal(err)
-		}
-		obj := &TestObject{ID: 1}
-		pool.Put(obj)
-
-		pool.Close()
-		if pool.Size() != 0 {
-			t.Errorf("Size() = %d, want 0 after Close()", pool.Size())
-		}
-		if pool.Active() != 0 {
-			t.Errorf("Active() = %d, want 0 after Close()", pool.Active())
-		}
-	})
 }
 
 func TestPoolCleanupUsageCount(t *testing.T) {
@@ -217,7 +160,6 @@ func TestPoolCleanupUsageCount(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer pool.Close()
 
 	// Create and return objects with different usage counts
 	obj1 := pool.RetrieveOrCreate() // Will be used once
@@ -254,8 +196,4 @@ func TestPoolCleanupUsageCount(t *testing.T) {
 	// Wait for cleanup to run
 	time.Sleep(1 * time.Second)
 
-	// Verify pool state
-	if pool.Size() != 0 {
-		t.Errorf("Size() = %d, want 0 (obj1 should be cleaned)", pool.Size())
-	}
 }
