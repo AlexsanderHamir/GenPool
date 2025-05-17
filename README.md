@@ -15,7 +15,7 @@ A lightweight, type-safe object pool implementation in Go. This pool implementat
 
 ```
 BenchmarkSyncPool        760000              1579 ns/op               3.9 B/op        0 allocs/op
-BenchmarkGetPool         742288              1620 ns/op               3 B/op          0 allocs/op
+BenchmarkGenPool         742288              1620 ns/op               3 B/op          0 allocs/op
 ```
 
 ## Features
