@@ -45,16 +45,21 @@ GenPool is a high-performance object pool implementation for Go that helps reduc
 
 ## Performance
 
-**GenPool** is built for high-throughput, low-latency use cases. Below is a comparison with Go's `sync.Pool`, which is tightly integrated with the runtime and optimized for short-lived object reuse:
+**GenPool** is built for high-throughput, low-latency use cases. Below is an averaged comparison with Go's `sync.Pool`, which is tightly integrated with the runtime and optimized for short-lived object reuse. Benchmark results are from 50 runs with 1,000 concurrent goroutines on each run:
 
 ```
-BenchmarkSyncPool        670000              1575 ns/op               3.7 B/op        0 allocs/op
-BenchmarkGenPool         644000              1616 ns/op               4.6 B/op        0 allocs/op
+BenchmarkSyncPool        680000              1610 ns/op               4.5 B/op        0 allocs/op
+BenchmarkGenPool         657000              1650 ns/op               4.5 B/op        0 allocs/op
 ```
 
-- **Throughput**: GenPool is within 4% of `sync.Pool` in ops/sec
-- **Latency**: ~2.6% slower per operation
-- **Allocations**: Zero allocations in both cases
+_Benchmark v1.0.0 - 50 runs, 1k goroutines_
+
+- **Throughput**: GenPool achieves ~657,000 operations per second, within 3.4% of `sync.Pool`'s throughput (680,000 ops/sec)
+- **Latency**: ~2.5% slower per operation (1650ns vs 1610ns)
+- **Memory**: Equal memory usage per operation (4.5B/op for both)
+- **Allocations**: Zero allocations in both cases, making both implementations GC-friendly
+
+> **Performance Tip**: For maximum performance in high-contention scenarios, ensure that your pooled objects have their interface fields (`usageCount` and `next`) on their own cache line by adding appropriate padding. This prevents false sharing and cache line bouncing between CPU cores. See the [benchmark test file](./pool/pool_benchmark_test.go) for an example implementation.
 
 ## Features
 
