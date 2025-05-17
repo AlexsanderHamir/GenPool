@@ -340,10 +340,3 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Support
-
-- 📚 [Documentation](https://godoc.org/github.com/AlexsanderHamir/GenPool)
-- 💬 [Discussions](https://github.com/AlexsanderHamir/GenPool/discussions)
-- 🐛 [Issue Tracker](https://github.com/AlexsanderHamir/GenPool/issues)
-- 📧 [Email Support](mailto:your-email@example.com)
