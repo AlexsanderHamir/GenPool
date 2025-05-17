@@ -105,7 +105,6 @@ func main() {
     if err != nil {
         panic(err)
     }
-    defer pool.Close()
 
     // Get an object from the pool
     obj, err := pool.RetrieveOrCreate()
