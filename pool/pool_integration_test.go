@@ -50,6 +50,7 @@ func (o *TestObjectWithResources) ResetUsage() {
 	o.LastUsedAt = time.Time{}
 }
 
+
 func newTestObjectWithResources() *TestObjectWithResources {
 	return &TestObjectWithResources{
 		ID:        1,

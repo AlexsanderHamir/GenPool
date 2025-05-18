@@ -14,6 +14,7 @@ type TestObject struct {
 	Value      string
 	next       atomic.Value // Stores Poolable
 	usageCount atomic.Int64
+	inUse      atomic.Bool // Track if object is in use
 }
 
 func (o *TestObject) GetNext() Poolable {
@@ -39,12 +40,21 @@ func (o *TestObject) ResetUsage() {
 	o.usageCount.Store(0)
 }
 
+func (o *TestObject) IsInUse() bool {
+	return o.inUse.Load()
+}
+
+func (o *TestObject) SetInUse(inUse bool) bool {
+	return o.inUse.CompareAndSwap(!inUse, inUse)
+}
+
 // NonPointerObject is used to test the pointer type constraint
 type NonPointerObject struct {
 	ID         int
 	Value      string
 	Next       atomic.Value
 	usageCount atomic.Int64
+	inUse      atomic.Bool
 }
 
 func (o NonPointerObject) GetNext() Poolable {
@@ -63,6 +73,14 @@ func (o NonPointerObject) IncrementUsage() {
 
 func (o NonPointerObject) ResetUsage() {
 	o.usageCount.Store(0)
+}
+
+func (o NonPointerObject) IsInUse() bool {
+	return o.inUse.Load()
+}
+
+func (o NonPointerObject) SetInUse(inUse bool) bool {
+	return o.inUse.CompareAndSwap(!inUse, inUse)
 }
 
 // testAllocator creates a new TestObject for the pool
