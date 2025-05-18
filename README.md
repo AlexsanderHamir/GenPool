@@ -49,27 +49,16 @@ GenPool is a high-performance object pool implementation for Go that helps reduc
 
 ### Benchmark Summary
 
-#### 1000 Goroutines (200 runs)
+#### 1000 Goroutines (100 runs)
 
-| Metric               | GenPool | sync.Pool | Difference |
-| -------------------- | ------- | --------- | ---------- |
-| Throughput (ops/sec) | 650,000 | 670,000   | -3.0%      |
-| Average Latency      | 1610ns  | 1590ns    | +1.3%      |
-| P95 Latency          | 1760ns  | 1620ns    | +8.6%      |
-| P99 Latency          | 1810ns  | 1730ns    | +4.6%      |
-| Memory/Op            | 4.2B    | 4.2B      | 0%         |
-| Allocs/Op            | 0       | 0         | 0%         |
-
-#### 100 Goroutines (200 runs)
-
-| Metric               | GenPool | sync.Pool | Difference |
-| -------------------- | ------- | --------- | ---------- |
-| Throughput (ops/sec) | 665,000 | 680,000   | -2.2%      |
-| Average Latency      | 1610ns  | 1590ns    | +1.3%      |
-| P95 Latency          | 1680ns  | 1640ns    | +2.4%      |
-| P99 Latency          | 1730ns  | 1750ns    | -1.1%      |
-| Memory/Op            | 3.0B    | 3.5B      | -14.3%     |
-| Allocs/Op            | 0       | 0         | 0%         |
+| Metric          | GenPool | sync.Pool | Difference |
+| --------------- | ------- | --------- | ---------- |
+| Average Latency | 1605ns  | 1604ns    | +0.06%     |
+| Median Latency  | 1596ns  | 1595ns    | +0.06%     |
+| P95 Latency     | 1637ns  | 1637ns    | 0%         |
+| P99 Latency     | 1649ns  | 1647ns    | +0.12%     |
+| Memory/Op       | 0 B     | 0 B       | 0%         |
+| Allocs/Op       | 0       | 0         | 0%         |
 
 > **Performance Tip**: For maximum performance in high-contention scenarios, ensure that your pooled objects have their interface fields (`usageCount` and `next`) on their own cache line by adding appropriate padding. This prevents false sharing and cache line bouncing between CPU cores. See the [benchmark test file](./pool/pool_benchmark_test.go) for an example implementation.
 
