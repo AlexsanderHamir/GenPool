@@ -1,6 +1,6 @@
 # Minimal Object Pool
 
-A production-ready, lock-free object pool implementation in Go that provides efficient object reuse, automatic cleanup, and type safety through generics. Perfect for high-performance applications, game development, and resource-intensive systems.
+A production-ready, lock-free object pool implementation in Go that provides efficient object reuse, automatic cleanup, and type safety through generics. Perfect for high-performance applications.
 
 [![GoDoc](https://godoc.org/github.com/AlexsanderHamir/GenPool?status.svg)](https://godoc.org/github.com/AlexsanderHamir/GenPool)
 ![Build](https://github.com/AlexsanderHamir/GenPool/actions/workflows/test.yml/badge.svg)
