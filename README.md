@@ -35,11 +35,10 @@ GenPool is a high-performance object pool implementation for Go that helps reduc
 - Game development with frequent object instantiation
 - Database connection pooling
 - Resource-intensive applications
-- High-frequency trading systems
-
+  
 ## Why Use GenPool?
 
-- **Lightweight**: Just 199 lines of code, with ongoing efforts to simplify and optimize further
+- **Lightweight**: Just 227 lines of code, with ongoing efforts to simplify and optimize further
 - **Type Safety**: Leverages Go generics for compile-time type checking
 - **Zero Dependencies**: Pure Go implementation with no external dependencies
 
