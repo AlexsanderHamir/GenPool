@@ -156,6 +156,7 @@ func NewPoolWithConfig[T Poolable](cfg PoolConfig[T]) (*Pool[T], error) {
 // RetrieveOrCreate retrieves an object from the pool or creates a new one using the allocator
 func (p *Pool[T]) RetrieveOrCreate() T {
 	if obj, ok := p.retrieve(); ok {
+		obj.IncrementUsage()
 		return obj
 	}
 
@@ -197,8 +198,6 @@ func (p *Pool[T]) retrieve() (zero T, success bool) {
 
 		next := oldHead.GetNext()
 		if p.head.CompareAndSwap(oldHead, next) {
-			oldHead.SetNext(zero)
-			oldHead.IncrementUsage() // Track usage when object is retrieved
 			return oldHead, true
 		}
 	}
@@ -291,3 +290,4 @@ func (p *Pool[T]) cleanup() {
 		current = next.(T)
 	}
 }
+
