@@ -97,13 +97,14 @@ import (
 
 // Your Object must implement the Poolable interface
 type BenchmarkObject struct {
-    // your fields
-    Value      int
-    Name       string
+ 	// user fields
+	Name string   // 16 bytes
+	Data []byte   // 24 bytes
+	_    [24]byte // 24 bytes = 64 bytes // padding
 
-    // must add these fields
-    next       atomic.Value
-    usageCount atomic.Int64
+	// interface necessary fields (kept together since they're modified together)
+	usageCount atomic.Int64
+	next       atomic.Value
 }
 
 func (o *BenchmarkObject) GetNext() Poolable {
