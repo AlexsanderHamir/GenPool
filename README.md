@@ -11,7 +11,7 @@ A production-ready, lock-free object pool implementation in Go that provides eff
 ![Last Commit](https://img.shields.io/github/last-commit/AlexsanderHamir/GenPool)
 ![Code Size](https://img.shields.io/github/languages/code-size/AlexsanderHamir/GenPool)
 ![Version](https://img.shields.io/github/v/tag/AlexsanderHamir/GenPool?sort=semver)
-![Go Version](https://img.shields.io/badge/Go-1.18%2B-blue)
+![Go Version](https://img.shields.io/badge/Go-1.23.4%2B-blue)
 
 ## Table of Contents
 
