@@ -104,7 +104,7 @@ func BenchmarkSyncPool(b *testing.B) {
 		},
 	}
 
-	b.SetParallelism(10)
+	b.SetParallelism(100)
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {

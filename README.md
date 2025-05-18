@@ -29,13 +29,14 @@ A production-ready, lock-free object pool implementation in Go that provides eff
 
 ## Overview
 
-GenPool is a high-performance object pool implementation for Go that helps reduce memory allocations and garbage collection pressure. It's designed for applications that frequently create and destroy objects, such as:
+GenPool is a high-performance, zero-allocation object pool implementation for Go that helps reduce memory allocations and garbage collection pressure. It's designed for concurrent, high-throughput applications that frequently create and destroy objects, such as:
 
 - Web servers handling high concurrent loads
 - Game development with frequent object instantiation
 - Database connection pooling
 - Resource-intensive applications
-  
+- Job schedulers and real-time processing pipelines
+
 ## Why Use GenPool?
 
 - **Lightweight**: Just 227 lines of code, with ongoing efforts to simplify and optimize further
@@ -50,14 +51,14 @@ GenPool is a high-performance object pool implementation for Go that helps reduc
 
 #### 1000 Goroutines (100 runs)
 
-| Metric          | GenPool | sync.Pool | Difference |
-| --------------- | ------- | --------- | ---------- |
-| Average Latency | 1605ns  | 1604ns    | +0.06%     |
-| Median Latency  | 1596ns  | 1595ns    | +0.06%     |
-| P95 Latency     | 1637ns  | 1637ns    | 0%         |
-| P99 Latency     | 1649ns  | 1647ns    | +0.12%     |
-| Memory/Op       | 0 B     | 0 B       | 0%         |
-| Allocs/Op       | 0       | 0         | 0%         |
+| Metric          | GenPool  | sync.Pool | Difference |
+| --------------- | -------- | --------- | ---------- |
+| Average Latency | 1593.4ns | 1593.91ns | -0.03%     |
+| Median Latency  | 1587.5ns | 1600.00ns | -0.8%      |
+| P95 Latency     | 1629ns   | 1614.00ns | +0.9%      |
+| P99 Latency     | 1638ns   | 1663.00ns | -1.5%      |
+| Memory/Op       | 4.0 B    | 4.37 B    | +9.25%     |
+| Allocs/Op       | 0        | 0         | 0%         |
 
 > **Performance Tip**: For maximum performance in high-contention scenarios, ensure that your pooled objects have their interface fields (`usageCount` and `next`) on their own cache line by adding appropriate padding. This prevents false sharing and cache line bouncing between CPU cores. See the [benchmark test file](./pool/pool_benchmark_test.go) for an example implementation.
 
