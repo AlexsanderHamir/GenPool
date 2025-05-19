@@ -16,8 +16,9 @@ type BenchmarkObject struct {
 	_    [24]byte // 24 bytes = 64 bytes
 
 	// interface necessary fields (kept together since they're modified together)
-	usageCount atomic.Int64
-	next       atomic.Value
+	usageCount atomic.Int64 // 8 bytes
+	next       atomic.Value // 16 bytes
+	_          [40]byte     // 40 bytes padding to make struct 128 bytes (2 cache lines)
 }
 
 func performWorkload(obj *BenchmarkObject) {

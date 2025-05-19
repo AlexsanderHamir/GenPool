@@ -1,6 +1,6 @@
 # Minimal Object Pool
 
-A production-ready, lock-free object pool implementation in Go that provides efficient object reuse, automatic cleanup, and type safety via generics. Perfect for high-performance applications.
+GenPool is a high-performance, zero-allocation object pool implementation for Go that leverages runtime-based sharding to achieve exceptional concurrency performance. By utilizing Go's runtime functions and implementing a sophisticated sharding mechanism, GenPool significantly reduces memory allocations and garbage collection pressure. It's specifically engineered for concurrent, high-throughput applications that frequently create and destroy objects, with each shard operating independently to minimize contention and maximize throughput.
 
 [![GoDoc](https://godoc.org/github.com/AlexsanderHamir/GenPool?status.svg)](https://godoc.org/github.com/AlexsanderHamir/GenPool)
 ![Build](https://github.com/AlexsanderHamir/GenPool/actions/workflows/test.yml/badge.svg)
@@ -17,7 +17,6 @@ A production-ready, lock-free object pool implementation in Go that provides eff
 
 - [Performance](#performance)
 - [Why Use GenPool?](#why-use-genpool)
-- [Overview](#overview)
 - [Features](#features)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
@@ -26,16 +25,6 @@ A production-ready, lock-free object pool implementation in Go that provides eff
 - [Configuration](#configuration)
 - [Contributing](#contributing)
 - [License](#license)
-
-## Overview
-
-GenPool is a high-performance, zero-allocation object pool implementation for Go that helps reduce memory allocations and garbage collection pressure. It's designed for concurrent, high-throughput applications that frequently create and destroy objects, such as:
-
-- Web servers handling high concurrent loads
-- Game development with frequent object instantiation
-- Database connection pooling
-- Resource-intensive applications
-- Job schedulers and real-time processing pipelines
 
 ## Why Use GenPool?
 
@@ -130,6 +119,7 @@ func (o *BenchmarkObject) ResetUsage() {
     o.usageCount.Store(0)
 }
 
+// Example using NewPoolWithConfig with custom configuration
 func main() {
     // Create allocator function for new objects
     allocator := pool.Allocator[*BenchmarkObject](func() *BenchmarkObject {
@@ -145,13 +135,27 @@ func main() {
         obj.Name = ""
     })
 
-    // Create pool with default configuration
-    pool, err := internal.NewPool(allocator, cleaner)
+    // Create custom cleanup policy
+    cleanupPolicy := pool.CleanupPolicy{
+        Enabled:       true,
+        Interval:      10 * time.Minute,
+        MinUsageCount: 20,
+        TargetSize:    200,
+    }
+
+    // Create pool with custom configuration
+    config := pool.PoolConfig[*BenchmarkObject]{
+        Cleanup:   cleanupPolicy,
+        Allocator: allocator,
+        Cleaner:   cleaner,
+    }
+
+    pool, err := internal.NewPoolWithConfig(config)
     if err != nil {
         panic(err)
     }
 
-    // Get an object from the pool
+    // Use the pool as before...
     obj, err := pool.RetrieveOrCreate()
     if err != nil {
         panic(err)

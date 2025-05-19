@@ -154,9 +154,9 @@ func NewPoolWithConfig[T Poolable](cfg PoolConfig[T]) (*ShardedPool[T], error) {
 	}
 
 	// Initialize shards
+	var zero T
 	for i := range p.shards {
 		p.shards[i] = &PoolShard[T]{}
-		var zero T
 		p.shards[i].head.Store(zero)
 	}
 
@@ -178,7 +178,7 @@ func NewPoolWithConfig[T Poolable](cfg PoolConfig[T]) (*ShardedPool[T], error) {
 
 // getShard returns the shard for the current goroutine
 func (p *ShardedPool[T]) getShard() *PoolShard[T] {
-	// Fast path: use goroutine ID for shard selection
+	// Fast path: use goroutine's processor ID for shard selection
 	// This provides better locality for goroutines that frequently access the pool
 	id := runtime_procPin()
 	runtime_procUnpin()
@@ -340,7 +340,13 @@ func (p *ShardedPool[T]) Config() PoolConfig[T] {
 	return p.cfg
 }
 
-// runtime_procPin and runtime_procUnpin are used to get the current goroutine's ID
+// runtime_procPin and runtime_procUnpin are used for processor pinning in the Go runtime.
+// runtime_procPin disables preemption of the current goroutine and returns the processor ID
+// that the goroutine is running on. This ensures the goroutine stays on the same processor
+// until runtime_procUnpin is called, which re-enables preemption.
+//
+// These functions are used in the pool to improve locality by keeping goroutines on the
+// same processor when accessing their shard, reducing cache misses and improving performance.
 //
 //go:linkname runtime_procPin runtime.procPin
 func runtime_procPin() int
