@@ -34,7 +34,7 @@ GenPool is a high-performance object pool for Go. It leverages runtime_procPin t
 
 ## Performance
 
-**GenPool** is built for high-throughput, low-latency use cases. The following benchmarks compare GenPool with Go's `sync.Pool` (which is tightly integrated with the runtime and optimized for short-lived object reuse).
+The following benchmarks compare GenPool with Go's `sync.Pool` (which is tightly integrated with the runtime and optimized for short-lived object reuse).
 
 ### Benchmark Summary
 
@@ -55,7 +55,7 @@ GenPool is a high-performance object pool for Go. It leverages runtime_procPin t
 
 - 🔒 Type-safe implementation using Go generics
 - ⚡ Lock-free operations using atomic operations
-- 🔄 Automatic cleanup of unused objects (configurable)
+- 🔄 Configurable cleanup of unused objects
 - 📊 Usage tracking for intelligent object eviction
 - 🎯 Thread-safe operations
 
