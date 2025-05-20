@@ -1,6 +1,6 @@
 # Minimal Object Pool
 
-GenPool is a high-performance, zero-allocation object pool for Go, purpose-built for high-concurrency workloads. It leverages runtime_procPin to consistently assign each processor to its own pool shard, ensuring fixed shard access per logical processor. This design maximizes cache locality, minimizes contention, and reduces garbage collection pressure. Each shard operates independently, making GenPool ideal for systems that rapidly create and recycle objects at scale.
+GenPool is a high-performance object pool for Go. It leverages runtime_procPin to consistently assign each processor to its own pool shard, ensuring fixed shard access per logical processor. This design maximizes cache locality, minimizes contention, and reduces garbage collection pressure. Each shard operates independently, making GenPool ideal for systems that rapidly create and recycle objects at scale.
 
 [![GoDoc](https://godoc.org/github.com/AlexsanderHamir/GenPool?status.svg)](https://godoc.org/github.com/AlexsanderHamir/GenPool)
 ![Build](https://github.com/AlexsanderHamir/GenPool/actions/workflows/test.yml/badge.svg)
