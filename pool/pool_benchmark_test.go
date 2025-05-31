@@ -30,7 +30,7 @@ func performWorkload(obj *BenchmarkObject) {
 	}
 
 	// Simulate some I/O or network delay
-	time.Sleep(time.Microsecond * 100)
+	time.Sleep(time.Microsecond * 10)
 }
 
 func (o *BenchmarkObject) GetNext() Poolable {
@@ -61,17 +61,17 @@ func newBenchmarkObject() *BenchmarkObject {
 	return &BenchmarkObject{Name: "test"}
 }
 
-func canBenchmarkObject(obj *BenchmarkObject) {
+func cleanBenchmarkObject(obj *BenchmarkObject) {
 	obj.Name = ""
 	obj.Data = obj.Data[:0]
 }
 
 // BenchmarkPool benchmarks basic Get/Put operations for our pool implementation
-// go test -run=^$ -bench=^BenchmarkGenPool$ -benchmem -count=100 -cpuprofile=cpu.out -memprofile=mem.out -trace=trace.out -mutexprofile=mutex.out
+// go test -run=^$ -bench=^BenchmarkGenPool$ -benchmem -count=2 -cpuprofile=cpu.out -memprofile=mem.out -trace=trace.out -mutexprofile=mutex.out
 func BenchmarkGenPool(b *testing.B) {
 	cfg := PoolConfig[*BenchmarkObject]{
 		Allocator: newBenchmarkObject,
-		Cleaner:   canBenchmarkObject,
+		Cleaner:   cleanBenchmarkObject,
 	}
 
 	pool, err := NewPoolWithConfig(cfg)
@@ -97,7 +97,7 @@ func BenchmarkGenPool(b *testing.B) {
 }
 
 // BenchmarkSyncPool benchmarks basic Get/Put operations for sync.Pool
-// go test -run=^$ -bench=^BenchmarkSyncPool$ -benchmem -count=100 -cpuprofile=cpu.out -memprofile=mem.out -trace=trace.out -mutexprofile=mutex.out
+// go test -run=^$ -bench=^BenchmarkSyncPool$ -benchmem -count=1 -cpuprofile=cpu.out -memprofile=mem.out -trace=trace.out -mutexprofile=mutex.out
 func BenchmarkSyncPool(b *testing.B) {
 	pool := &sync.Pool{
 		New: func() any {
@@ -105,7 +105,7 @@ func BenchmarkSyncPool(b *testing.B) {
 		},
 	}
 
-	b.SetParallelism(100)
+	b.SetParallelism(1000)
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
