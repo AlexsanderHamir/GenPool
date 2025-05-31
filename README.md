@@ -81,7 +81,7 @@ The following benchmarks compare GenPool with Go's `sync.Pool` (which is tightly
 > In the scenario with **1000 goroutines** on both GenPool and SyncPool, **GenPool’s worst run** was compared against **SyncPool’s best**, yet the results were still competitive:  
 > GenPool consumed **8.3% less memory per operation**, with only a slight tradeoff in latency (around **2% higher on average**).  
 >  
-> This reinforces **GenPool’s strength in predictable and efficient performance under high contention**.
+> This reinforces **GenPool’s strength in delivering predictable and efficient performance under high contention**, while also providing customizable cleanup—giving you full control over when and how aggressively objects are reclaimed.
 
 
 > **Performance Tip**: For maximum performance in high-contention scenarios, ensure that your pooled objects have their interface fields (`usageCount` and `next`) on their own cache line by adding appropriate padding. This prevents false sharing and cache line bouncing between CPU cores. See the [benchmark test file](./pool/pool_benchmark_test.go) for an example implementation.
