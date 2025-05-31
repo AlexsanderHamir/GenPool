@@ -178,7 +178,7 @@ func NewPoolWithConfig[T Poolable](cfg PoolConfig[T]) (*ShardedPool[T], error) {
 
 // getShard returns the shard for the current goroutine
 func (p *ShardedPool[T]) getShard() *PoolShard[T] {
-	// Fast path: use goroutine's processor ID for shard selection
+	// Use goroutine's processor ID for shard selection
 	// This provides better locality for goroutines that frequently access the pool
 	id := runtime_procPin()
 	runtime_procUnpin()
