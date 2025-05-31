@@ -1,3 +1,6 @@
 tasks.md
 *.out
 *.test
+config_template.json
+.DS_Store
+**/.DS_Store
