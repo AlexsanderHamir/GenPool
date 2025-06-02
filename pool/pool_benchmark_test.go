@@ -97,7 +97,7 @@ func BenchmarkGenPool(b *testing.B) {
 }
 
 // BenchmarkSyncPool benchmarks basic Get/Put operations for sync.Pool
-// go test -run=^$ -bench=^BenchmarkSyncPool$ -benchmem -count=1 -cpuprofile=cpu.out -memprofile=mem.out -trace=trace.out -mutexprofile=mutex.out
+// go test -run=^$ -bench=^BenchmarkGenPoolAggressiveCleanup$ -benchmem -count=1 -cpuprofile=cpu.out -memprofile=mem.out -trace=trace.out -mutexprofile=mutex.out
 func BenchmarkSyncPool(b *testing.B) {
 	pool := &sync.Pool{
 		New: func() any {
@@ -119,6 +119,93 @@ func BenchmarkSyncPool(b *testing.B) {
 
 			obj.Name = ""
 			obj.Data = obj.Data[:0]
+
+			pool.Put(obj)
+		}
+	})
+}
+
+// prof -benchmarks "[BenchmarkGenPoolNoCleanup,BenchmarkGenPoolAggressiveCleanup,BenchmarkGenPoolConservativeCleanup,BenchmarkGenPoolTargetSizeCleanup]" -profiles "[cpu,memory]" -tag "profiling" -count 1
+
+// BenchmarkGenPoolNoCleanup benchmarks the pool with cleanup disabled
+func BenchmarkGenPoolNoCleanup(b *testing.B) {
+	cfg := PoolConfig[*BenchmarkObject]{
+		Allocator: newBenchmarkObject,
+		Cleaner:   cleanBenchmarkObject,
+		Cleanup: CleanupPolicy{
+			Enabled: false,
+		},
+	}
+
+	benchmarkPoolWithConfig(b, cfg)
+}
+
+// BenchmarkGenPoolAggressiveCleanup benchmarks the pool with aggressive cleanup
+func BenchmarkGenPoolAggressiveCleanup(b *testing.B) {
+	cfg := PoolConfig[*BenchmarkObject]{
+		Allocator: newBenchmarkObject,
+		Cleaner:   cleanBenchmarkObject,
+		Cleanup: CleanupPolicy{
+			Enabled:       true,
+			Interval:      500 * time.Millisecond,
+			MinUsageCount: 1,
+			TargetSize:    0,
+		},
+	}
+
+	benchmarkPoolWithConfig(b, cfg)
+}
+
+// BenchmarkGenPoolConservativeCleanup benchmarks the pool with conservative cleanup
+func BenchmarkGenPoolConservativeCleanup(b *testing.B) {
+	cfg := PoolConfig[*BenchmarkObject]{
+		Allocator: newBenchmarkObject,
+		Cleaner:   cleanBenchmarkObject,
+		Cleanup: CleanupPolicy{
+			Enabled:       true,
+			Interval:      5 * time.Minute,
+			MinUsageCount: 100,
+			TargetSize:    0,
+		},
+	}
+
+	benchmarkPoolWithConfig(b, cfg)
+}
+
+// BenchmarkGenPoolTargetSizeCleanup benchmarks the pool with target size cleanup
+func BenchmarkGenPoolTargetSizeCleanup(b *testing.B) {
+	cfg := PoolConfig[*BenchmarkObject]{
+		Allocator: newBenchmarkObject,
+		Cleaner:   cleanBenchmarkObject,
+		Cleanup: CleanupPolicy{
+			Enabled:       true,
+			Interval:      1 * time.Second,
+			MinUsageCount: 5,
+			TargetSize:    1000, // Target 1000 objects in the pool
+		},
+	}
+
+	benchmarkPoolWithConfig(b, cfg)
+}
+
+// benchmarkPoolWithConfig is a helper function to run benchmarks with a specific config
+func benchmarkPoolWithConfig(b *testing.B, cfg PoolConfig[*BenchmarkObject]) {
+	pool, err := NewPoolWithConfig(cfg)
+	if err != nil {
+		b.Fatalf("error creating pool: %v", err)
+	}
+
+	b.SetParallelism(1000)
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			obj := pool.RetrieveOrCreate()
+
+			if obj == nil {
+				b.Fatal("obj is nil")
+			}
+
+			performWorkload(obj)
 
 			pool.Put(obj)
 		}
