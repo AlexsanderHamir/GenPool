@@ -48,7 +48,7 @@ type CleanupPolicy struct {
 	Interval time.Duration
 	// MinUsageCount is the minimum number of times an object should be used before being considered for eviction
 	MinUsageCount int64
-	// TargetSize is the target number of objects to keep after cleanup
+	// TargetSize is the target number of objects to attempt to keep during cleanup
 	// If 0, no target size is enforced
 	TargetSize int
 }
@@ -297,6 +297,7 @@ func (p *ShardedPool[T]) cleanup() {
 func (p *ShardedPool[T]) cleanupShard(shard *PoolShard[T]) {
 	var current, prev T
 	var kept int
+	var zero T
 
 	// Start from the head of the shard
 	current, ok := shard.head.Load().(T)
@@ -314,21 +315,29 @@ func (p *ShardedPool[T]) cleanupShard(shard *PoolShard[T]) {
 		usageCount := current.GetUsageCount()
 
 		// Determine if we should keep this object
-		shouldKeep := usageCount >= p.cfg.Cleanup.MinUsageCount && (p.cfg.Cleanup.TargetSize <= 0 || kept < p.cfg.Cleanup.TargetSize/numShards)
+		metMinUsageCount := usageCount >= p.cfg.Cleanup.MinUsageCount
+		targetDisabled := p.cfg.Cleanup.TargetSize <= 0
+		underShardQuota := kept < p.cfg.Cleanup.TargetSize/numShards
 
+		shouldKeep := metMinUsageCount && (targetDisabled || underShardQuota)
 		if shouldKeep {
 			// Reset usage count for kept objects
 			current.ResetUsage()
 			prev = current
 			kept++
 		} else {
-			// Remove current object from list
 			if reflect.ValueOf(prev).IsNil() {
-				// We're at the head
-				shard.head.Store(next)
+				if reflect.ValueOf(next).IsNil() {
+					shard.head.Store(zero)
+				} else {
+					shard.head.Store(next)
+				}
 			} else {
 				prev.SetNext(next)
 			}
+
+			current.SetNext(zero)
+			p.cfg.Cleaner(current)
 		}
 
 		current = next.(T)
