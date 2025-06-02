@@ -293,13 +293,11 @@ func (p *ShardedPool[T]) cleanup() {
 	}
 }
 
-// cleanupShard cleans up a single shard
 func (p *ShardedPool[T]) cleanupShard(shard *PoolShard[T]) {
 	var current, prev T
 	var kept int
 	var zero T
 
-	// Start from the head of the shard
 	current, ok := shard.head.Load().(T)
 	if !ok {
 		return
@@ -309,19 +307,16 @@ func (p *ShardedPool[T]) cleanupShard(shard *PoolShard[T]) {
 		return
 	}
 
-	// Traverse and clean the list
 	for !reflect.ValueOf(current).IsNil() {
 		next := current.GetNext()
 		usageCount := current.GetUsageCount()
 
-		// Determine if we should keep this object
 		metMinUsageCount := usageCount >= p.cfg.Cleanup.MinUsageCount
 		targetDisabled := p.cfg.Cleanup.TargetSize <= 0
 		underShardQuota := kept < p.cfg.Cleanup.TargetSize/numShards
 
 		shouldKeep := metMinUsageCount && (targetDisabled || underShardQuota)
 		if shouldKeep {
-			// Reset usage count for kept objects
 			current.ResetUsage()
 			prev = current
 			kept++
@@ -342,11 +337,6 @@ func (p *ShardedPool[T]) cleanupShard(shard *PoolShard[T]) {
 
 		current = next.(T)
 	}
-}
-
-// Config returns the current pool configuration
-func (p *ShardedPool[T]) Config() PoolConfig[T] {
-	return p.cfg
 }
 
 // runtime_procPin and runtime_procUnpin are used for processor pinning in the Go runtime.

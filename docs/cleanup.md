@@ -8,27 +8,51 @@ By resetting the usage count only for retained objects, the system gives every o
 
 ````go
 
-        shouldKeep := usageCount >= p.cfg.Cleanup.MinUsageCount && (p.cfg.Cleanup.TargetSize <= 0 || kept < p.cfg.Cleanup.TargetSize)
+    func (p *ShardedPool[T]) cleanupShard(shard *PoolShard[T]) {
+	var current, prev T
+	var kept int
+	var zero T
+
+	current, ok := shard.head.Load().(T)
+	if !ok {
+		return
+	}
+
+	if reflect.ValueOf(current).IsNil() {
+		return
+	}
+
+	for !reflect.ValueOf(current).IsNil() {
+		next := current.GetNext()
+		usageCount := current.GetUsageCount()
+
+		metMinUsageCount := usageCount >= p.cfg.Cleanup.MinUsageCount
+		targetDisabled := p.cfg.Cleanup.TargetSize <= 0
+		underShardQuota := kept < p.cfg.Cleanup.TargetSize/numShards
+
+		shouldKeep := metMinUsageCount && (targetDisabled || underShardQuota)
 		if shouldKeep {
-			// Reset usage count for kept objects
 			current.ResetUsage()
 			prev = current
 			kept++
-			fmt.Printf("[Cleanup] Keeping object (total kept: %d)\n", kept)
 		} else {
-			// Remove current object from list
 			if reflect.ValueOf(prev).IsNil() {
-				// We're at the head
-				fmt.Println("[Cleanup] Removing head object")
-				p.head.Store(next)
+				if reflect.ValueOf(next).IsNil() {
+					shard.head.Store(zero)
+				} else {
+					shard.head.Store(next)
+				}
 			} else {
-				fmt.Println("[Cleanup] Removing object from middle of list")
 				prev.SetNext(next)
 			}
-			if p.active.Load() > 0 {
-				p.active.Add(-1)
-			}
-			removed++
+
+			current.SetNext(zero)
+			p.cfg.Cleaner(current)
 		}
+
+		current = next.(T)
+	}
+}
+
 ```
 ````
