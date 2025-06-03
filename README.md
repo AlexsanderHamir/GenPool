@@ -147,19 +147,14 @@ func (o *BenchmarkObject) ResetUsage() {
 
 // Example using NewPoolWithConfig with custom configuration
 func main() {
-    // Create allocator function for new objects
-    allocator := pool.Allocator[*BenchmarkObject](func() *BenchmarkObject {
-        return &BenchmarkObject{
-            Value: 0,
-            Name:  "",
-        }
-    })
+    func allocator() *BenchmarkObject {
+	    return &BenchmarkObject{Name: "test"}
+    }
 
-    // Create cleaner function for resetting objects
-    cleaner := pool.Cleaner[*BenchmarkObject](func(obj *BenchmarkObject) {
-        obj.Value = 0
-        obj.Name = ""
-    })
+    func cleaner(obj *BenchmarkObject) {
+	    obj.Name = ""
+	    obj.Data = obj.Data[:0]
+    }
 
     // Create custom cleanup policy
     cleanupPolicy := pool.CleanupPolicy{
@@ -176,7 +171,7 @@ func main() {
         Cleaner:   cleaner,
     }
 
-    pool, err := internal.NewPoolWithConfig(config)
+    pool, err := pool.NewPoolWithConfig(config)
     if err != nil {
         panic(err)
     }
@@ -204,24 +199,6 @@ Methods Available:
 // Core pool operations
 RetrieveOrCreate() (T, error)  // Gets an object from the pool or creates a new one
 Put(obj T)                     // Returns an object to the pool
-```
-
-Example usage:
-
-```go
-pool, _ := internal.NewPool(allocator, cleaner)
-
-// Get an object
-obj, err := pool.RetrieveOrCreate()
-if err != nil {
-    // Handle error
-}
-
-// Use the object
-// ...
-
-// Return to pool
-pool.Put(obj)
 ```
 
 #### PoolConfig[T Poolable]
@@ -260,17 +237,6 @@ type CleanupPolicy struct {
 }
 ```
 
-Example cleanup policy:
-
-```go
-cleanupPolicy := CleanupPolicy{
-    Enabled:       true,
-    Interval:      10 * time.Minute,
-    MinUsageCount: 20,
-    TargetSize:    200,
-}
-```
-
 ### Function Types
 
 #### Allocator[T]
@@ -305,69 +271,11 @@ Example implementation:
 
 ```go
 cleaner := Cleaner[*MyObject](func(obj *MyObject) {
-    obj.State = "clean"
-    obj.LastUsed = time.Time{}
+    obj.State = ""
+    obj.LastUsed = nil
     obj.Buffer = nil
     // Reset other fields to their initial state...
 })
-```
-
-## Use Cases
-
-### 1. Database Connection Pooling
-
-```go
-type DBConnection struct {
-    conn *sql.DB
-    // ... poolable fields
-}
-
-pool, _ := NewPool(
-    Allocator[*DBConnection](func() *DBConnection {
-        return &DBConnection{conn: createNewConnection()}
-    }),
-    Cleaner[*DBConnection](func(conn *DBConnection) {
-        conn.conn.Ping() // Verify connection health
-    }),
-)
-```
-
-### 2. Game Development
-
-```go
-type GameObject struct {
-    Position Vector3D
-    // ... poolable fields
-}
-
-pool, _ := NewPool(
-    Allocator[*GameObject](func() *GameObject {
-        return &GameObject{Position: Vector3D{0, 0, 0}}
-    }),
-    Cleaner[*GameObject](func(obj *GameObject) {
-        obj.Position = Vector3D{0, 0, 0}
-    }),
-)
-```
-
-### 3. HTTP Request Handling
-
-```go
-type RequestContext struct {
-    Headers map[string]string
-    // ... poolable fields
-}
-
-pool, _ := NewPool(
-    Allocator[*RequestContext](func() *RequestContext {
-        return &RequestContext{Headers: make(map[string]string)}
-    }),
-    Cleaner[*RequestContext](func(ctx *RequestContext) {
-        for k := range ctx.Headers {
-            delete(ctx.Headers, k)
-        }
-    }),
-)
 ```
 
 ## Contributing
