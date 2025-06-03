@@ -57,11 +57,11 @@ func (o *BenchmarkObject) ResetUsage() {
 }
 
 // Helper functions for benchmarks
-func newBenchmarkObject() *BenchmarkObject {
+func allocator() *BenchmarkObject {
 	return &BenchmarkObject{Name: "test"}
 }
 
-func cleanBenchmarkObject(obj *BenchmarkObject) {
+func cleaner(obj *BenchmarkObject) {
 	obj.Name = ""
 	obj.Data = obj.Data[:0]
 }
@@ -70,8 +70,8 @@ func cleanBenchmarkObject(obj *BenchmarkObject) {
 // go test -run=^$ -bench=^BenchmarkGenPool$ -benchmem -count=2 -cpuprofile=cpu.out -memprofile=mem.out -trace=trace.out -mutexprofile=mutex.out
 func BenchmarkGenPool(b *testing.B) {
 	cfg := PoolConfig[*BenchmarkObject]{
-		Allocator: newBenchmarkObject,
-		Cleaner:   cleanBenchmarkObject,
+		Allocator: allocator,
+		Cleaner:   cleaner,
 	}
 
 	pool, err := NewPoolWithConfig(cfg)
@@ -101,7 +101,7 @@ func BenchmarkGenPool(b *testing.B) {
 func BenchmarkSyncPool(b *testing.B) {
 	pool := &sync.Pool{
 		New: func() any {
-			return newBenchmarkObject()
+			return allocator()
 		},
 	}
 
@@ -130,8 +130,8 @@ func BenchmarkSyncPool(b *testing.B) {
 // BenchmarkGenPoolNoCleanup benchmarks the pool with cleanup disabled
 func BenchmarkGenPoolNoCleanup(b *testing.B) {
 	cfg := PoolConfig[*BenchmarkObject]{
-		Allocator: newBenchmarkObject,
-		Cleaner:   cleanBenchmarkObject,
+		Allocator: allocator,
+		Cleaner:   cleaner,
 		Cleanup: CleanupPolicy{
 			Enabled: false,
 		},
@@ -143,8 +143,8 @@ func BenchmarkGenPoolNoCleanup(b *testing.B) {
 // BenchmarkGenPoolAggressiveCleanup benchmarks the pool with aggressive cleanup
 func BenchmarkGenPoolAggressiveCleanup(b *testing.B) {
 	cfg := PoolConfig[*BenchmarkObject]{
-		Allocator: newBenchmarkObject,
-		Cleaner:   cleanBenchmarkObject,
+		Allocator: allocator,
+		Cleaner:   cleaner,
 		Cleanup: CleanupPolicy{
 			Enabled:       true,
 			Interval:      500 * time.Millisecond,
@@ -159,8 +159,8 @@ func BenchmarkGenPoolAggressiveCleanup(b *testing.B) {
 // BenchmarkGenPoolConservativeCleanup benchmarks the pool with conservative cleanup
 func BenchmarkGenPoolConservativeCleanup(b *testing.B) {
 	cfg := PoolConfig[*BenchmarkObject]{
-		Allocator: newBenchmarkObject,
-		Cleaner:   cleanBenchmarkObject,
+		Allocator: allocator,
+		Cleaner:   cleaner,
 		Cleanup: CleanupPolicy{
 			Enabled:       true,
 			Interval:      5 * time.Minute,
@@ -175,8 +175,8 @@ func BenchmarkGenPoolConservativeCleanup(b *testing.B) {
 // BenchmarkGenPoolTargetSizeCleanup benchmarks the pool with target size cleanup
 func BenchmarkGenPoolTargetSizeCleanup(b *testing.B) {
 	cfg := PoolConfig[*BenchmarkObject]{
-		Allocator: newBenchmarkObject,
-		Cleaner:   cleanBenchmarkObject,
+		Allocator: allocator,
+		Cleaner:   cleaner,
 		Cleanup: CleanupPolicy{
 			Enabled:       true,
 			Interval:      1 * time.Second,
