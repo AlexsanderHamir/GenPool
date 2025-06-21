@@ -1,6 +1,6 @@
 # Minimal Object Pool
 
-GenPool is a high-performance object pool for Go. It leverages `runtime_procPin` to consistently assign each processor to its own pool shard, ensuring fixed shard access per logical processor. This design maximizes cache locality, minimizes contention, and reduces garbage collection pressure. Each shard operates independently, making GenPool ideal for systems that rapidly create and recycle objects at scale. Additionally, GenPool offers customizable cleanup, allowing you to control when and how aggressively pooled objects are reclaimed, giving you greater flexibility and efficiency.
+GenPool delivers sync.Pool-level performance with the added benefit of configurable object reclamation, letting you fine-tune reuse and lifecycle management.
 
 [![GoDoc](https://godoc.org/github.com/AlexsanderHamir/GenPool?status.svg)](https://godoc.org/github.com/AlexsanderHamir/GenPool)
 ![Build](https://github.com/AlexsanderHamir/GenPool/actions/workflows/test.yml/badge.svg)
@@ -16,21 +16,10 @@ GenPool is a high-performance object pool for Go. It leverages `runtime_procPin`
 ## Table of Contents
 
 - [Performance](#performance)
-- [Why Use GenPool?](#why-use-genpool)
-- [Features](#features)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
-- [Use Cases](#use-cases)
-- [API Reference](#api-reference)
-- [Configuration](#configuration)
 - [Contributing](#contributing)
 - [License](#license)
-
-## Why Use GenPool?
-
-- **Lightweight**: Just 227 lines of code, with ongoing efforts to simplify and optimize further
-- **Type Safety**: Leverages Go generics for compile-time type checking
-- **Zero Dependencies**: Pure Go implementation with no external dependencies
 
 ## Performance
 
@@ -75,14 +64,6 @@ The following benchmarks compare GenPool with Go's `sync.Pool` (which is tightly
 > Across many benchmarks, the performance differences between GenPool and sync.Pool mostly disappear. GenPool tends to show slightly lower latency under high concurrency, but the gap is minimal—typically around 20 nanoseconds. Use GenPool if you need more control over when and how aggressively objects are cleaned up.
 
 > **Performance Tip**: For maximum performance in high-contention scenarios, ensure that your pooled objects have their interface fields (`usageCount` and `next`) on their own cache line by adding appropriate padding. This prevents false sharing and cache line bouncing between CPU cores. See the [benchmark test file](./pool/pool_benchmark_test.go) for an example implementation.
-
-## Features
-
-- 🔒 Type-safe implementation using Go generics
-- ⚡ Lock-free operations using atomic operations
-- 🔄 Configurable cleanup of unused objects
-- 📊 Usage tracking for intelligent object eviction
-- 🎯 Thread-safe operations
 
 ## References
 
@@ -189,93 +170,6 @@ func main() {
     // Return the object to the pool
     pool.Put(obj)
 }
-```
-
-## API Reference
-
-Methods Available:
-
-```go
-// Core pool operations
-RetrieveOrCreate() (T, error)  // Gets an object from the pool or creates a new one
-Put(obj T)                     // Returns an object to the pool
-```
-
-#### PoolConfig[T Poolable]
-
-Configuration struct for customizing pool behavior. All have sensible defaults:
-
-```go
-type PoolConfig[T Poolable] struct {
-    Cleanup   CleanupPolicy // Cleanup configuration
-    Allocator Allocator[T]  // Function to create new objects
-    Cleaner   Cleaner[T]    // Function to reset objects
-}
-```
-
-#### CleanupPolicy
-
-Controls the pool's cleanup behavior to prevent memory bloat and manage resource usage:
-
-```go
-type CleanupPolicy struct {
-    // Whether automatic cleanup is enabled
-    // Default: false
-    Enabled bool
-
-    // How often the cleanup routine runs
-    // Default: 5 minutes
-    Interval time.Duration
-
-    // Objects with usage count below this threshold
-    // may be evicted during cleanup
-    // Default: 5
-    MinUsageCount int64
-
-    // Target number of objects to maintain after cleanup
-    TargetSize int
-}
-```
-
-### Function Types
-
-#### Allocator[T]
-
-Function type for creating new objects. Must return a new instance of the pooled type.
-
-```go
-type Allocator[T Poolable] func() T
-```
-
-Example implementation:
-
-```go
-allocator := Allocator[*MyObject](func() *MyObject {
-    return &MyObject{
-        ID:    uuid.New(),
-        State: "new",
-        // Initialize other fields...
-    }
-})
-```
-
-#### Cleaner[T]
-
-Function type for resetting objects before they are returned to the pool. This helps ensure objects are in a clean state for the next use.
-
-```go
-type Cleaner[T Poolable] func(T)
-```
-
-Example implementation:
-
-```go
-cleaner := Cleaner[*MyObject](func(obj *MyObject) {
-    obj.State = ""
-    obj.LastUsed = nil
-    obj.Buffer = nil
-    // Reset other fields to their initial state...
-})
 ```
 
 ## Contributing
