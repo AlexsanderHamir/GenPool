@@ -1,6 +1,12 @@
-pool/pool.go -export-ignore
-go.mod -export-ignore
-go.sum -export-ignore
+benchmark_results_transparency/** export-ignore
+docs/** export-ignore
+.github/** export-ignore
+.vscode/** export-ignore
+.gitignore export-ignore
+.gitattributes export-ignore
+*.md export-ignore
+LICENSE export-ignore
 
-
-* export-ignore
+pool/pool_benchmark_test.go export-ignore
+pool/pool_integration_test.go export-ignore
+pool/pool_test.go export-ignore
