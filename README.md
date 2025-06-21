@@ -1,4 +1,4 @@
-# Minimal Object Pool
+# GenPool
 
 GenPool delivers sync.Pool-level performance with the added benefit of configurable object reclamation, letting you fine-tune reuse and lifecycle management.
 
