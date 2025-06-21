@@ -23,46 +23,11 @@ GenPool delivers sync.Pool-level performance with the added benefit of configura
 
 ## Performance
 
-The following benchmarks compare GenPool with Go's `sync.Pool` (which is tightly integrated with the runtime and optimized for short-lived object reuse).
+Choose GenPool when you need finer control over object lifecycle, especially in scenarios where predictable reclamation and reuse patterns are critical, instead of aggressive object reclamantion.
 
-### Benchmark Summary (100 runs each)
+For a detailed breakdown of the performance go to [GenPool vs SyncPool](./benchmark_results_transparency)
 
-#### Scenario: GenPool (100 goroutines) vs SyncPool (1000 goroutines)
-
-| Metric          | GenPool (100) | SyncPool (1k) | Difference |
-| --------------- | ------------- | ------------- | ---------- |
-| Average Latency | **1553.0ns**  | 1572.1ns      | **-1.2%**  |
-| Median Latency  | **1542.0ns**  | 1534.0ns      | **+0.5%**  |
-| P95 Latency     | **1570.0ns**  | 1659.0ns      | **-5.4%**  |
-| P99 Latency     | **1588.0ns**  | 1822.0ns      | **-12.8%** |
-| Memory/Op       | **1.7 B**     | 3.4 B         | **-50.0%** |
-| Allocs/Op       | 0             | 0             | 0%         |
-
-#### Scenario: GenPool (1000 goroutines) vs SyncPool (100 goroutines)
-
-| **Metric**          | **GenPool (1k)** | **SyncPool (100)** | **Difference** |
-| ------------------- | ---------------- | ------------------ | -------------- |
-| **Average Latency** | **1548.7 ns**    | 1575.5 ns          | **-1.7%**      |
-| **Median Latency**  | **1547.0 ns**    | 1579.0 ns          | **-2.0%**      |
-| **P95 Latency**     | **1590.0 ns**    | 1590.0 ns          | **0%**         |
-| **P99 Latency**     | **1600.0 ns**    | 1599.0 ns          | **+0.1%**      |
-| **Memory/Op**       | **3.2 B**        | 2.0 B              | **+60%**       |
-| **Allocs/Op**       | **0**            | 0                  | **0%**         |
-
-#### Scenario: GenPool (1000 goroutines) vs SyncPool (1000 goroutines)
-
-| Metric          | GenPool (1k) | SyncPool (1k) | Difference |
-| --------------- | ------------ | ------------- | ---------- |
-| Average Latency | 1578.7ns     | 1552.6ns      | **+1.7%**  |
-| Median Latency  | 1574.0ns     | 1535.0ns      | **+2.5%**  |
-| P95 Latency     | 1622.0ns     | 1590.0ns      | **+2.0%**  |
-| P99 Latency     | 1680.0ns     | 1648.0ns      | **+1.9%**  |
-| Memory/Op       | 3.3 B        | 3.6 B         | **-8.3%**  |
-| Allocs/Op       | 0            | 0             | 0%         |
-
-> **Benchmark Analysis**:  
-> Across many benchmarks, the performance differences between GenPool and sync.Pool mostly disappear. GenPool tends to show slightly lower latency under high concurrency, but the gap is minimal—typically around 20 nanoseconds. Use GenPool if you need more control over when and how aggressively objects are cleaned up.
-
+> In most benchmarks, GenPool performs on par with sync.Pool. Under high concurrency, GenPool often delivers slightly lower latency, reduced memory usage, and less contention—though the differences are typically small (e.g., ~20ns faster and ~1–3 bytes lighter per operation).
 > **Performance Tip**: For maximum performance in high-contention scenarios, ensure that your pooled objects have their interface fields (`usageCount` and `next`) on their own cache line by adding appropriate padding. This prevents false sharing and cache line bouncing between CPU cores. See the [benchmark test file](./pool/pool_benchmark_test.go) for an example implementation.
 
 ## References

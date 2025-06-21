@@ -1,0 +1,91 @@
+File: pool.test
+Type: alloc_space
+Time: 2025-06-21 12:16:20 PDT
+Showing nodes accounting for 499.32MB, 100% of 499.32MB total
+      flat  flat%   sum%        cum   cum%
+   92.50MB 18.53% 18.53%   329.71MB 66.03%  testing.(*B).RunParallel.func1
+         0     0% 18.53%   237.20MB 47.51%  github.com/AlexsanderHamir/GenPool/pool.BenchmarkSyncPool.func2
+  217.70MB 43.60% 62.13%   226.70MB 45.40%  github.com/AlexsanderHamir/GenPool/pool.performWorkload
+         0     0% 62.13%   144.01MB 28.84%  testing.(*B).runN
+         0     0% 62.13%   143.01MB 28.64%  github.com/AlexsanderHamir/GenPool/pool.BenchmarkSyncPool
+  143.01MB 28.64% 90.77%   143.01MB 28.64%  testing.(*B).RunParallel
+         0     0% 90.77%   108.50MB 21.73%  testing.(*B).launch
+         0     0% 90.77%       35MB  7.01%  testing.(*B).run1.func1
+         0     0% 90.77%       10MB  2.00%  runtime.(*traceAdvancerState).start.func1
+         0     0% 90.77%       10MB  2.00%  runtime.(*traceStackTable).dump
+         0     0% 90.77%       10MB  2.00%  runtime.dumpStacksRec
+    3.50MB   0.7% 91.47%       10MB  2.00%  runtime.makeTraceFrames
+         0     0% 91.47%       10MB  2.00%  runtime.traceAdvance
+       9MB  1.80% 93.27%        9MB  1.80%  time.Sleep
+         0     0% 93.27%     8.50MB  1.70%  sync.(*Pool).Get
+         0     0% 93.27%        8MB  1.60%  github.com/AlexsanderHamir/GenPool/pool.BenchmarkSyncPool.func1
+       8MB  1.60% 94.87%        8MB  1.60%  github.com/AlexsanderHamir/GenPool/pool.allocator (inline)
+    6.50MB  1.30% 96.17%     6.50MB  1.30%  runtime.CallersFrames (inline)
+         0     0% 96.17%     5.06MB  1.01%  runtime.newproc.func1
+         0     0% 96.17%     5.06MB  1.01%  runtime.newproc1
+         0     0% 96.17%     5.06MB  1.01%  runtime.systemstack
+         0     0% 96.17%     4.97MB     1%  main.main
+         0     0% 96.17%     4.97MB     1%  runtime.main
+         0     0% 96.17%     4.47MB   0.9%  testing.(*M).Run
+         0     0% 96.17%     4.07MB  0.82%  runtime/pprof.profileWriter
+       4MB   0.8% 96.97%        4MB   0.8%  runtime.malg
+         0     0% 96.97%     3.57MB  0.71%  runtime/pprof.(*profileBuilder).build
+         0     0% 96.97%     3.47MB  0.69%  testing.(*M).before
+         0     0% 96.97%     3.06MB  0.61%  runtime/pprof.(*profileBuilder).appendLocsForStack
+    1.04MB  0.21% 97.18%     2.56MB  0.51%  runtime/pprof.(*profileBuilder).emitLocation
+         0     0% 97.18%     2.50MB   0.5%  sync.(*Pool).Put
+    2.50MB   0.5% 97.68%     2.50MB   0.5%  sync.(*poolChain).pushHead
+    2.31MB  0.46% 98.15%     2.31MB  0.46%  runtime/trace.Start
+    0.88MB  0.18% 98.32%     1.52MB   0.3%  compress/flate.NewWriter (inline)
+         0     0% 98.32%     1.52MB   0.3%  compress/gzip.(*Writer).Write
+         0     0% 98.32%     1.52MB   0.3%  runtime/pprof.(*profileBuilder).flush
+    1.50MB   0.3% 98.62%     1.50MB   0.3%  runtime.allocm
+         0     0% 98.62%     1.50MB   0.3%  runtime.newm
+         0     0% 98.62%     1.50MB   0.3%  runtime.resetspinning
+         0     0% 98.62%     1.50MB   0.3%  runtime.schedule
+         0     0% 98.62%     1.50MB   0.3%  runtime.startm
+         0     0% 98.62%     1.50MB   0.3%  runtime.wakep
+         0     0% 98.62%     1.50MB   0.3%  runtime.mcall
+         0     0% 98.62%     1.50MB   0.3%  runtime.park_m
+    1.16MB  0.23% 98.86%     1.16MB  0.23%  runtime/pprof.StartCPUProfile
+         0     0% 98.86%     1.16MB  0.23%  testing/internal/testdeps.TestDeps.StartCPUProfile
+    1.06MB  0.21% 99.07%     1.06MB  0.21%  runtime.allgadd
+         0     0% 99.07%        1MB   0.2%  testing.runBenchmarks
+    0.64MB  0.13% 99.20%     0.64MB  0.13%  compress/flate.(*compressor).init
+    0.51MB   0.1% 99.30%     0.51MB   0.1%  runtime/pprof.(*protobuf).string (inline)
+         0     0% 99.30%     0.51MB   0.1%  runtime/pprof.(*protobuf).strings
+    0.50MB   0.1% 99.40%     0.50MB   0.1%  runtime/pprof.(*profMap).lookup
+         0     0% 99.40%     0.50MB   0.1%  runtime/pprof.(*profileBuilder).addCPUData
+         0     0% 99.40%     0.50MB   0.1%  runtime.mstart
+         0     0% 99.40%     0.50MB   0.1%  runtime.mstart0
+         0     0% 99.40%     0.50MB   0.1%  runtime.mstart1
+         0     0% 99.40%     0.50MB   0.1%  fmt.Fprintf
+         0     0% 99.40%     0.50MB   0.1%  fmt.newPrinter
+         0     0% 99.40%     0.50MB   0.1%  sync.(*Pool).pin
+    0.50MB   0.1% 99.50%     0.50MB   0.1%  sync.(*Pool).pinSlow
+         0     0% 99.50%     0.50MB   0.1%  testing.(*B).Run
+         0     0% 99.50%     0.50MB   0.1%  testing.(*B).run
+         0     0% 99.50%     0.50MB   0.1%  testing.(*benchState).processBench
+         0     0% 99.50%     0.50MB   0.1%  testing.BenchmarkResult.String
+         0     0% 99.50%     0.50MB   0.1%  testing.runBenchmarks.func1
+    0.50MB   0.1% 99.60%     0.50MB   0.1%  testing.(*B).ResetTimer
+    0.50MB   0.1% 99.70%     0.50MB   0.1%  runtime/pprof.allFrames
+         0     0% 99.70%     0.50MB   0.1%  regexp.Compile (inline)
+         0     0% 99.70%     0.50MB   0.1%  regexp.compile
+         0     0% 99.70%     0.50MB   0.1%  regexp.compileOnePass
+         0     0% 99.70%     0.50MB   0.1%  regexp.makeOnePass
+    0.50MB   0.1% 99.80%     0.50MB   0.1%  regexp.newQueue (inline)
+         0     0% 99.80%     0.50MB   0.1%  testing.newMatcher
+         0     0% 99.80%     0.50MB   0.1%  testing.simpleMatch.verify
+         0     0% 99.80%     0.50MB   0.1%  testing/internal/testdeps.TestDeps.MatchString
+         0     0% 99.80%     0.50MB   0.1%  flag.(*FlagSet).Int
+         0     0% 99.80%     0.50MB   0.1%  flag.(*FlagSet).IntVar (inline)
+    0.50MB   0.1% 99.90%     0.50MB   0.1%  flag.(*FlagSet).Var
+         0     0% 99.90%     0.50MB   0.1%  flag.Int (inline)
+         0     0% 99.90%     0.50MB   0.1%  testing.Init
+         0     0% 99.90%     0.50MB   0.1%  testing.MainStart
+         0     0% 99.90%     0.50MB   0.1%  runtime.(*timer).maybeAdd
+         0     0% 99.90%     0.50MB   0.1%  runtime.(*timer).modify
+         0     0% 99.90%     0.50MB   0.1%  runtime.(*timer).reset (inline)
+    0.50MB   0.1%   100%     0.50MB   0.1%  runtime.(*timers).addHeap
+         0     0%   100%     0.50MB   0.1%  runtime.resetForSleep

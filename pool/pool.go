@@ -196,10 +196,7 @@ func (p *ShardedPool[T]) Put(obj T) {
 	shard := p.getShard()
 
 	for {
-		oldHead, ok := shard.head.Load().(T)
-		if !ok {
-			return
-		}
+		oldHead := shard.head.Load().(T)
 
 		obj.SetNext(oldHead)
 		if shard.head.CompareAndSwap(oldHead, obj) {
@@ -213,10 +210,7 @@ func (p *ShardedPool[T]) Put(obj T) {
 // retrieveFromShard gets an object from a specific shard
 func (p *ShardedPool[T]) retrieveFromShard(shard *PoolShard[T]) (zero T, success bool) {
 	for {
-		oldHead, ok := shard.head.Load().(T)
-		if !ok {
-			return zero, false
-		}
+		oldHead := shard.head.Load().(T)
 
 		if reflect.ValueOf(oldHead).IsNil() {
 			return zero, false
@@ -233,10 +227,7 @@ func (p *ShardedPool[T]) retrieveFromShard(shard *PoolShard[T]) (zero T, success
 func (p *ShardedPool[T]) clear() {
 	var zero T
 	for _, shard := range p.shards {
-		current, ok := shard.head.Load().(T)
-		if !ok {
-			continue
-		}
+		current := shard.head.Load().(T)
 
 		if !reflect.ValueOf(current).IsNil() {
 			if shard.head.CompareAndSwap(current, zero) {
@@ -286,10 +277,7 @@ func (p *ShardedPool[T]) cleanupShard(shard *PoolShard[T]) {
 	var kept int
 	var zero T
 
-	current, ok := shard.head.Load().(T)
-	if !ok {
-		return
-	}
+	current = shard.head.Load().(T)
 
 	if reflect.ValueOf(current).IsNil() {
 		return

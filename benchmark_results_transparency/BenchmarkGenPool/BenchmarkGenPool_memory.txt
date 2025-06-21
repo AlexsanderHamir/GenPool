@@ -1,0 +1,68 @@
+File: pool.test
+Type: alloc_space
+Time: 2025-06-21 12:14:16 PDT
+Showing nodes accounting for 494.75MB, 100% of 494.75MB total
+      flat  flat%   sum%        cum   cum%
+      89MB 17.99% 17.99%   323.69MB 65.43%  testing.(*B).RunParallel.func1
+         0     0% 17.99%   234.69MB 47.44%  github.com/AlexsanderHamir/GenPool/pool.BenchmarkGenPool.func1
+  218.69MB 44.20% 62.19%   226.69MB 45.82%  github.com/AlexsanderHamir/GenPool/pool.performWorkload
+         0     0% 62.19%   152.01MB 30.72%  testing.(*B).runN
+         0     0% 62.19%   151.01MB 30.52%  github.com/AlexsanderHamir/GenPool/pool.BenchmarkGenPool
+  151.01MB 30.52% 92.71%   151.01MB 30.52%  testing.(*B).RunParallel
+         0     0% 92.71%      107MB 21.63%  testing.(*B).launch
+         0     0% 92.71%    44.50MB  8.99%  testing.(*B).run1.func1
+         0     0% 92.71%        8MB  1.62%  github.com/AlexsanderHamir/GenPool/pool.(*ShardedPool[go.shape.*uint8]).RetrieveOrCreate
+       8MB  1.62% 94.33%        8MB  1.62%  github.com/AlexsanderHamir/GenPool/pool.allocator
+       8MB  1.62% 95.95%        8MB  1.62%  time.Sleep
+    6.50MB  1.31% 97.26%     6.50MB  1.31%  runtime.malg
+         0     0% 97.26%     6.50MB  1.31%  runtime.newproc.func1
+         0     0% 97.26%     6.50MB  1.31%  runtime.newproc1
+         0     0% 97.26%     6.50MB  1.31%  runtime.systemstack
+         0     0% 97.26%     6.50MB  1.31%  runtime.(*traceAdvancerState).start.func1
+         0     0% 97.26%     6.50MB  1.31%  runtime.(*traceStackTable).dump
+         0     0% 97.26%     6.50MB  1.31%  runtime.dumpStacksRec
+       4MB  0.81% 98.07%     6.50MB  1.31%  runtime.makeTraceFrames
+         0     0% 98.07%     6.50MB  1.31%  runtime.traceAdvance
+         0     0% 98.07%     3.97MB   0.8%  main.main
+         0     0% 98.07%     3.97MB   0.8%  runtime.main
+         0     0% 98.07%     3.97MB   0.8%  testing.(*M).Run
+         0     0% 98.07%     3.47MB   0.7%  testing.(*M).before
+    2.50MB  0.51% 98.58%     2.50MB  0.51%  runtime.CallersFrames (inline)
+    2.31MB  0.47% 99.04%     2.31MB  0.47%  runtime/trace.Start
+    1.50MB   0.3% 99.35%     1.50MB   0.3%  runtime.allocm
+         0     0% 99.35%     1.50MB   0.3%  runtime.newm
+         0     0% 99.35%     1.50MB   0.3%  runtime.resetspinning
+         0     0% 99.35%     1.50MB   0.3%  runtime.schedule
+         0     0% 99.35%     1.50MB   0.3%  runtime.startm
+         0     0% 99.35%     1.50MB   0.3%  runtime.wakep
+    1.16MB  0.23% 99.58%     1.16MB  0.23%  runtime/pprof.StartCPUProfile
+         0     0% 99.58%     1.16MB  0.23%  testing/internal/testdeps.TestDeps.StartCPUProfile
+         0     0% 99.58%        1MB   0.2%  runtime.mstart
+         0     0% 99.58%        1MB   0.2%  runtime.mstart0
+         0     0% 99.58%        1MB   0.2%  runtime.mstart1
+         0     0% 99.58%     0.57MB  0.12%  compress/flate.(*compressor).init
+         0     0% 99.58%     0.57MB  0.12%  compress/flate.NewWriter (inline)
+    0.57MB  0.12% 99.70%     0.57MB  0.12%  compress/flate.newDeflateFast (inline)
+         0     0% 99.70%     0.57MB  0.12%  compress/gzip.(*Writer).Write
+         0     0% 99.70%     0.57MB  0.12%  runtime/pprof.(*profileBuilder).appendLocsForStack
+         0     0% 99.70%     0.57MB  0.12%  runtime/pprof.(*profileBuilder).build
+         0     0% 99.70%     0.57MB  0.12%  runtime/pprof.(*profileBuilder).emitLocation
+         0     0% 99.70%     0.57MB  0.12%  runtime/pprof.(*profileBuilder).flush
+         0     0% 99.70%     0.57MB  0.12%  runtime/pprof.profileWriter
+    0.50MB   0.1% 99.80%     0.50MB   0.1%  runtime.procresize
+         0     0% 99.80%     0.50MB   0.1%  runtime.rt0_go
+         0     0% 99.80%     0.50MB   0.1%  runtime.schedinit
+         0     0% 99.80%     0.50MB   0.1%  runtime.mcall
+         0     0% 99.80%     0.50MB   0.1%  runtime.park_m
+         0     0% 99.80%     0.50MB   0.1%  fmt.Fprintf
+         0     0% 99.80%     0.50MB   0.1%  fmt.newPrinter
+         0     0% 99.80%     0.50MB   0.1%  sync.(*Pool).Get
+         0     0% 99.80%     0.50MB   0.1%  sync.(*Pool).pin
+    0.50MB   0.1% 99.90%     0.50MB   0.1%  sync.(*Pool).pinSlow
+         0     0% 99.90%     0.50MB   0.1%  testing.(*B).Run
+         0     0% 99.90%     0.50MB   0.1%  testing.(*B).run
+         0     0% 99.90%     0.50MB   0.1%  testing.(*benchState).processBench
+         0     0% 99.90%     0.50MB   0.1%  testing.BenchmarkResult.String
+         0     0% 99.90%     0.50MB   0.1%  testing.runBenchmarks
+         0     0% 99.90%     0.50MB   0.1%  testing.runBenchmarks.func1
+    0.50MB   0.1%   100%     0.50MB   0.1%  testing.(*B).ResetTimer
