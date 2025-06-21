@@ -1,0 +1,4 @@
+# Include only necessary files on archive
+pool/pool.go export
+go.mod export
+go.sum export
