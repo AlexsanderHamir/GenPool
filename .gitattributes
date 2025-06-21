@@ -1,6 +1,6 @@
-pool/pool.go
-go.mod
-go.sum
+pool/pool.go -export-ignore
+go.mod -export-ignore
+go.sum -export-ignore
+
 
 * export-ignore
-
