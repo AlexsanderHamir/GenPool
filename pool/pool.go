@@ -1,6 +1,7 @@
 package pool
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"runtime"
@@ -12,32 +13,21 @@ import (
 
 // Common errors that may be returned by the pool
 var (
-	// ErrNotPointerType is returned when attempting to create a pool with a non-pointer type
-	ErrNotPointerType = fmt.Errorf("type must be a pointer type")
-
-	// ErrInvalidPoolType is returned when the pool's head contains an invalid type
-	ErrInvalidPoolType = fmt.Errorf("invalid pool type")
-
-	// ErrHardLimitReached is returned when attempting to create a new object would exceed the pool's hard limit
-	ErrHardLimitReached = fmt.Errorf("hard limit reached")
+	// ErrNonPointerType is returned when attempting to create a pool with a non-pointer type
+	ErrNonPointerType = fmt.Errorf("type must be a pointer type")
 
 	// ErrNoAllocator is returned when attempting to get an object but no allocator is configured
 	ErrNoAllocator = fmt.Errorf("no allocator configured")
 
-	// ErrAllocatorFailed is returned when the allocator function fails to create a new object
-	ErrAllocatorFailed = fmt.Errorf("allocator failed")
+	// ErrNoCleaner is returned when attempting to create a pool but no cleaner is configured
+	ErrNoCleaner = fmt.Errorf("no cleaner configured")
 
 	// ErrCleanerFailed is returned when the cleaner function fails to clean an object
 	ErrCleanerFailed = fmt.Errorf("cleaner failed")
-
-	// ErrNoObjectsAvailable is returned when no objects are available in the pool
-	ErrNoObjectsAvailable = fmt.Errorf("no objects available")
 )
 
-// Constants for pool configuration
 var (
-	// numShards is the number of shards in the pool, set to the number of CPU cores
-	numShards = runtime.NumCPU()
+	numShards = runtime.GOMAXPROCS(0)
 )
 
 // CleanupPolicy defines how the pool should clean up unused objects
@@ -46,7 +36,7 @@ type CleanupPolicy struct {
 	Enabled bool
 	// Interval is how often the cleanup should run
 	Interval time.Duration
-	// MinUsageCount is the minimum number of times an object should be used before being considered for eviction
+	// MinUsageCount is the number of usage below which an object will be evicted
 	MinUsageCount int64
 	// TargetSize is the target number of objects to attempt to keep during cleanup
 	// If 0, no target size is enforced
@@ -58,7 +48,7 @@ func DefaultCleanupPolicy() CleanupPolicy {
 	return CleanupPolicy{
 		Enabled:       false,
 		Interval:      5 * time.Minute,
-		MinUsageCount: 10, // Objects used less than 10 times may be evicted
+		MinUsageCount: 1,
 		TargetSize:    0,
 	}
 }
@@ -131,7 +121,7 @@ func NewPool[T Poolable](allocator Allocator[T], cleaner Cleaner[T]) (*ShardedPo
 	var zero T
 	t := reflect.TypeOf(zero)
 	if t.Kind() != reflect.Ptr {
-		return nil, fmt.Errorf("%w, got %T", ErrNotPointerType, zero)
+		return nil, fmt.Errorf("%w, got %T", ErrNonPointerType, zero)
 	}
 
 	cfg := DefaultConfig(allocator, cleaner)
@@ -144,7 +134,7 @@ func NewPoolWithConfig[T Poolable](cfg PoolConfig[T]) (*ShardedPool[T], error) {
 		return nil, fmt.Errorf("%w: allocator is required", ErrNoAllocator)
 	}
 	if cfg.Cleaner == nil {
-		return nil, fmt.Errorf("%w: cleaner is required", ErrCleanerFailed)
+		return nil, fmt.Errorf("%w: cleaner is required", ErrNoCleaner)
 	}
 
 	p := &ShardedPool[T]{
@@ -153,7 +143,6 @@ func NewPoolWithConfig[T Poolable](cfg PoolConfig[T]) (*ShardedPool[T], error) {
 		shards:    make([]*PoolShard[T], numShards),
 	}
 
-	// Initialize shards
 	var zero T
 	for i := range p.shards {
 		p.shards[i] = &PoolShard[T]{}
@@ -162,13 +151,13 @@ func NewPoolWithConfig[T Poolable](cfg PoolConfig[T]) (*ShardedPool[T], error) {
 
 	if cfg.Cleanup.Enabled {
 		if cfg.Cleanup.Interval <= 0 {
-			return nil, fmt.Errorf("%w: cleanup interval must be greater than 0", ErrInvalidPoolType)
+			return nil, errors.New("cleanup interval must be greater than 0")
 		}
-		if cfg.Cleanup.MinUsageCount < 0 {
-			return nil, fmt.Errorf("%w: minimum usage count must be greater than or equal to 0", ErrInvalidPoolType)
+		if cfg.Cleanup.MinUsageCount <= 0 {
+			return nil, errors.New("minimum usage count must be greater than 0")
 		}
 		if cfg.Cleanup.TargetSize < 0 {
-			return nil, fmt.Errorf("%w: target size must be greater than or equal to 0", ErrInvalidPoolType)
+			return nil, errors.New("target size can't be negative")
 		}
 		p.startCleaner()
 	}
@@ -204,10 +193,8 @@ func (p *ShardedPool[T]) RetrieveOrCreate() T {
 
 // Put returns an object to the pool
 func (p *ShardedPool[T]) Put(obj T) {
-	p.cfg.Cleaner(obj)
 	shard := p.getShard()
 
-	// Add to shard's list
 	for {
 		oldHead, ok := shard.head.Load().(T)
 		if !ok {
@@ -216,6 +203,8 @@ func (p *ShardedPool[T]) Put(obj T) {
 
 		obj.SetNext(oldHead)
 		if shard.head.CompareAndSwap(oldHead, obj) {
+			// Only clean the object after successfully adding it to the pool
+			p.cfg.Cleaner(obj)
 			return
 		}
 	}
@@ -241,23 +230,22 @@ func (p *ShardedPool[T]) retrieveFromShard(shard *PoolShard[T]) (zero T, success
 }
 
 // Clear removes all objects from the pool
-func (p *ShardedPool[T]) Clear() {
+func (p *ShardedPool[T]) clear() {
 	var zero T
 	for _, shard := range p.shards {
-		for {
-			oldHead, ok := shard.head.Load().(T)
-			if !ok {
-				break
-			}
+		current, ok := shard.head.Load().(T)
+		if !ok {
+			continue
+		}
 
-			if reflect.ValueOf(oldHead).IsNil() {
-				break
-			}
-
-			if shard.head.CompareAndSwap(oldHead, zero) {
-				p.cfg.Cleaner(oldHead)
-				oldHead.SetNext(zero)
-				break
+		if !reflect.ValueOf(current).IsNil() {
+			if shard.head.CompareAndSwap(current, zero) {
+				for !reflect.ValueOf(current).IsNil() {
+					next := current.GetNext()
+					current.SetNext(zero)
+					p.cfg.Cleaner(current)
+					current = next.(T)
+				}
 			}
 		}
 	}
@@ -313,7 +301,12 @@ func (p *ShardedPool[T]) cleanupShard(shard *PoolShard[T]) {
 
 		metMinUsageCount := usageCount >= p.cfg.Cleanup.MinUsageCount
 		targetDisabled := p.cfg.Cleanup.TargetSize <= 0
-		underShardQuota := kept < p.cfg.Cleanup.TargetSize/numShards
+
+		shardQuota := 1
+		if p.cfg.Cleanup.TargetSize > 0 {
+			shardQuota = max(1, p.cfg.Cleanup.TargetSize/numShards)
+		}
+		underShardQuota := kept < shardQuota
 
 		shouldKeep := metMinUsageCount && (targetDisabled || underShardQuota)
 		if shouldKeep {
@@ -332,21 +325,21 @@ func (p *ShardedPool[T]) cleanupShard(shard *PoolShard[T]) {
 			}
 
 			current.SetNext(zero)
-			p.cfg.Cleaner(current)
 		}
 
 		current = next.(T)
 	}
 }
 
-// runtime_procPin and runtime_procUnpin are used for processor pinning in the Go runtime.
-// runtime_procPin disables preemption of the current goroutine and returns the processor ID
-// that the goroutine is running on. This ensures the goroutine stays on the same processor
-// until runtime_procUnpin is called, which re-enables preemption.
-//
-// These functions are used in the pool to improve locality by keeping goroutines on the
-// same processor when accessing their shard, reducing cache misses and improving performance.
-//
+// Close stops the cleanup goroutine and clears the pool
+func (p *ShardedPool[T]) Close() {
+	if p.cfg.Cleanup.Enabled {
+		close(p.stopClean)
+		p.cleanWg.Wait()
+		p.clear()
+	}
+}
+
 //go:linkname runtime_procPin runtime.procPin
 func runtime_procPin() int
 

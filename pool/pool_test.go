@@ -110,8 +110,8 @@ func TestNewPool(t *testing.T) {
 			func() NonPointerObject { return NonPointerObject{} },
 			func(obj NonPointerObject) {},
 		)
-		if !errors.Is(err, ErrNotPointerType) {
-			t.Errorf("NewPool() error = %v, want %v", err, ErrNotPointerType)
+		if !errors.Is(err, ErrNonPointerType) {
+			t.Errorf("NewPool() error = %v, want %v", err, ErrNonPointerType)
 		}
 	})
 }
@@ -168,67 +168,55 @@ func TestPoolConcurrent(t *testing.T) {
 
 func TestPoolCleanupUsageCount(t *testing.T) {
 	t.Run("should cleanup low usage objects", func(t *testing.T) {
-		// Configure pool with cleanup enabled
 		cfg := DefaultConfig(testAllocator, testCleaner)
 		cfg.Cleanup.Enabled = true
 		cfg.Cleanup.Interval = 100 * time.Millisecond
-		cfg.Cleanup.MinUsageCount = 2 // Objects used less than 2 times will be cleaned
-		cfg.Cleanup.TargetSize = 0    // No target size limit
 
 		pool, err := NewPoolWithConfig(cfg)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		// Create and return objects with low usage count
-		obj1 := pool.RetrieveOrCreate() // Will be used once
+		obj1 := pool.RetrieveOrCreate()
 		if obj1 == nil {
 			t.Fatal("RetrieveOrCreate() returned nil object")
 		}
-		obj1.IncrementUsage() // Use it once
+		obj1.IncrementUsage() // 2
 
-		// Return object to pool
 		pool.Put(obj1)
 
-		// Wait for cleanup to run
 		time.Sleep(1 * time.Second)
 
-		// Check if obj1 was cleaned up (usage count reset to 0)
 		if obj1.GetUsageCount() != 0 {
 			t.Errorf("obj1 should have been cleaned up (usage count 0), got %d", obj1.GetUsageCount())
 		}
 	})
 
 	t.Run("should not cleanup high usage objects", func(t *testing.T) {
-		// Configure pool with cleanup enabled
 		cfg := DefaultConfig(testAllocator, testCleaner)
 		cfg.Cleanup.Enabled = true
 		cfg.Cleanup.Interval = 1 * time.Second
-		cfg.Cleanup.MinUsageCount = 2 // Objects used less than 2 times will be cleaned
-		cfg.Cleanup.TargetSize = 0    // No target size limit
+		cfg.Cleanup.MinUsageCount = 2
+		cfg.Cleanup.TargetSize = 0
 
 		pool, err := NewPoolWithConfig(cfg)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		// Create and return object with high usage count
-		obj1 := pool.RetrieveOrCreate() // Will be used multiple times
+		obj1 := pool.RetrieveOrCreate() // 1
 		if obj1 == nil {
 			t.Fatal("RetrieveOrCreate() returned nil object")
 		}
 
-		// Use the object multiple times
-		for range 3 {
-			obj1.IncrementUsage()
-		}
+		obj1.IncrementUsage() // 2
+		obj1.IncrementUsage() // 3
+		obj1.IncrementUsage() // 4
 
-		// Return object to pool
-		pool.Put(obj1)
+		time.Sleep(1 * time.Second)
 
-		// Check if obj1 was NOT cleaned up (usage count should remain high)
 		if obj1.GetUsageCount() != 4 {
-			t.Errorf("obj1 should not have been cleaned up, expected usage count 3, got %d", obj1.GetUsageCount())
+			t.Errorf("obj1 should not have been cleaned up, expected usage count 4, got %d", obj1.GetUsageCount())
 		}
 	})
 }

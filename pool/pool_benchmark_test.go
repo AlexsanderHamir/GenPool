@@ -2,6 +2,7 @@ package pool
 
 import (
 	"math/rand"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -66,9 +67,8 @@ func cleaner(obj *BenchmarkObject) {
 	obj.Data = obj.Data[:0]
 }
 
-// BenchmarkPool benchmarks basic Get/Put operations for our pool implementation
-// go test -run=^$ -bench=^BenchmarkGenPool$ -benchmem -count=2 -cpuprofile=cpu.out -memprofile=mem.out -trace=trace.out -mutexprofile=mutex.out
 func BenchmarkGenPool(b *testing.B) {
+	runtime.SetBlockProfileRate(1)
 	cfg := PoolConfig[*BenchmarkObject]{
 		Allocator: allocator,
 		Cleaner:   cleaner,
@@ -95,10 +95,8 @@ func BenchmarkGenPool(b *testing.B) {
 		}
 	})
 }
-
-// BenchmarkSyncPool benchmarks basic Get/Put operations for sync.Pool
-// go test -run=^$ -bench=^BenchmarkGenPoolAggressiveCleanup$ -benchmem -count=1 -cpuprofile=cpu.out -memprofile=mem.out -trace=trace.out -mutexprofile=mutex.out
 func BenchmarkSyncPool(b *testing.B) {
+	runtime.SetBlockProfileRate(1)
 	pool := &sync.Pool{
 		New: func() any {
 			return allocator()
