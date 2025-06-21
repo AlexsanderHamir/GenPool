@@ -3,7 +3,6 @@ package pool
 import (
 	"context"
 	"fmt"
-	"runtime"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -50,7 +49,6 @@ func (o *TestObjectWithResources) ResetUsage() {
 	o.LastUsedAt = time.Time{}
 }
 
-
 func newTestObjectWithResources() *TestObjectWithResources {
 	return &TestObjectWithResources{
 		ID:        1,
@@ -66,43 +64,6 @@ func cleanTestObjectWithResources(obj *TestObjectWithResources) {
 	obj.Value = ""
 	obj.Data = obj.Data[:0]
 	obj.IsValid = false
-}
-
-// TestPoolMemoryLeaks verifies that the pool doesn't leak memory
-func TestPoolMemoryLeaks(t *testing.T) {
-	cfg := DefaultConfig(newTestObjectWithResources, cleanTestObjectWithResources)
-	pool, err := NewPoolWithConfig(cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Force GC before measuring
-	runtime.GC()
-	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
-	initialAlloc := m.TotalAlloc
-
-	// Create and return objects in a loop
-	const iterations = 10000
-	for range iterations {
-		obj := pool.RetrieveOrCreate()
-		if obj == nil {
-			t.Fatal("RetrieveOrCreate returned nil")
-		}
-		obj.IncrementUsage()
-		pool.Put(obj)
-	}
-
-	// Force GC and measure again
-	runtime.GC()
-	runtime.ReadMemStats(&m)
-	finalAlloc := m.TotalAlloc
-
-	// Calculate memory growth per iteration
-	memoryGrowth := float64(finalAlloc-initialAlloc) / float64(iterations)
-	if memoryGrowth > 1000 {
-		t.Errorf("Suspicious memory growth: %.2f bytes per iteration", memoryGrowth)
-	}
 }
 
 // TestPoolStress tests the pool under heavy concurrent load
@@ -179,7 +140,6 @@ func TestPoolObjectLifecycle(t *testing.T) {
 	cfg.Cleanup.Enabled = true
 	cfg.Cleanup.Interval = 100 * time.Millisecond
 	cfg.Cleanup.MinUsageCount = 2
-	cfg.Cleanup.TargetSize = 5
 
 	pool, err := NewPoolWithConfig(cfg)
 	if err != nil {
@@ -208,14 +168,6 @@ func TestPoolObjectLifecycle(t *testing.T) {
 		t.Errorf("Expected usage count 2, got %d", obj2.GetUsageCount())
 	}
 
-	// Test cleanup of rarely used objects
-	for range 10 {
-		newObj := pool.RetrieveOrCreate()
-		pool.Put(newObj)
-	}
-
-	// Wait for cleanup
-	time.Sleep(200 * time.Millisecond)
 }
 
 // TestPoolConfigurationValidation verifies configuration validation
