@@ -142,7 +142,7 @@ func main() {
 
 We welcome contributions! Before you start contributing, please ensure you have:
 
-- **Go 1.23.4 or later** installed
+- **Go 1.24.3 or later** installed
 - **Git** for version control
 - Basic understanding of Go testing and benchmarking
 
