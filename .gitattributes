@@ -1,4 +1,7 @@
-# Include only necessary files on archive
-pool/pool.go export
-go.mod export
-go.sum export
+# Ignore everything by default
+* export-ignore
+
+# Explicitly include only the needed files by NOT marking them
+pool/pool.go
+go.mod
+go.sum
