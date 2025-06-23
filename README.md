@@ -108,7 +108,6 @@ func main() {
         Enabled:       true,
         Interval:      10 * time.Minute,
         MinUsageCount: 20,
-        TargetSize:    200,
     }
 
     // Create pool with custom configuration

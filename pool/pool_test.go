@@ -149,7 +149,9 @@ func TestPoolCleanupUsageCount(t *testing.T) {
 		if obj1 == nil {
 			t.Fatal("RetrieveOrCreate() returned nil object")
 		}
-		obj1.IncrementUsage() // 2
+
+		obj1.IncrementUsage()
+		obj1.IncrementUsage()
 
 		pool.Put(obj1)
 
