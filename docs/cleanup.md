@@ -6,7 +6,6 @@ This two-pass approach ensures that objects which were heavily used in the past 
 
 By resetting the usage count only for retained objects, the system gives every object a fair chance to prove recent utility before eviction—encouraging temporal locality and keeping the pool fresh.
 
-When `TargetSize` is configured, the pool ensures at least 1 object per shard (minimum of `TargetSize/numShards` or 1), preventing complete eviction of objects from any shard.
 
 ````go
 
