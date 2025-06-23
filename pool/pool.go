@@ -186,15 +186,14 @@ func (p *ShardedPool[T]) RetrieveOrCreate() T {
 
 // Put returns an object to the pool
 func (p *ShardedPool[T]) Put(obj T) {
+	p.cfg.Cleaner(obj)
 	shard := p.getShard()
 
 	for {
 		oldHead := shard.head.Load().(T)
 
-		obj.SetNext(oldHead)
 		if shard.head.CompareAndSwap(oldHead, obj) {
-			// Only clean the object after successfully adding it to the pool
-			p.cfg.Cleaner(obj)
+			obj.SetNext(oldHead)
 			return
 		}
 	}
