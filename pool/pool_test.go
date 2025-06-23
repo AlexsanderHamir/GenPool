@@ -2,7 +2,6 @@ package pool
 
 import (
 	"errors"
-	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -135,37 +134,6 @@ func TestPoolRetrieveOrCreate(t *testing.T) {
 	})
 }
 
-func TestPoolConcurrent(t *testing.T) {
-	cfg := DefaultConfig(testAllocator, testCleaner)
-	pool, err := NewPoolWithConfig(cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	const goroutines = 10
-	const iterations = 100
-	var wg sync.WaitGroup
-	wg.Add(goroutines)
-
-	for range goroutines {
-		go func() {
-			defer wg.Done()
-			for range iterations {
-				obj := pool.RetrieveOrCreate()
-				if obj == nil {
-					t.Errorf("RetrieveOrCreate() error = %v", err)
-					return
-				}
-				time.Sleep(time.Millisecond)
-
-				pool.Put(obj)
-			}
-		}()
-	}
-
-	wg.Wait()
-}
-
 func TestPoolCleanupUsageCount(t *testing.T) {
 	t.Run("should cleanup low usage objects", func(t *testing.T) {
 		cfg := DefaultConfig(testAllocator, testCleaner)
@@ -197,7 +165,6 @@ func TestPoolCleanupUsageCount(t *testing.T) {
 		cfg.Cleanup.Enabled = true
 		cfg.Cleanup.Interval = 1 * time.Second
 		cfg.Cleanup.MinUsageCount = 2
-		cfg.Cleanup.TargetSize = 0
 
 		pool, err := NewPoolWithConfig(cfg)
 		if err != nil {

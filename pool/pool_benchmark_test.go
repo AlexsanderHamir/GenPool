@@ -147,7 +147,6 @@ func BenchmarkGenPoolAggressiveCleanup(b *testing.B) {
 			Enabled:       true,
 			Interval:      500 * time.Millisecond,
 			MinUsageCount: 1,
-			TargetSize:    0,
 		},
 	}
 
@@ -163,7 +162,6 @@ func BenchmarkGenPoolConservativeCleanup(b *testing.B) {
 			Enabled:       true,
 			Interval:      5 * time.Minute,
 			MinUsageCount: 100,
-			TargetSize:    0,
 		},
 	}
 
@@ -179,7 +177,6 @@ func BenchmarkGenPoolTargetSizeCleanup(b *testing.B) {
 			Enabled:       true,
 			Interval:      1 * time.Second,
 			MinUsageCount: 5,
-			TargetSize:    1000, // Target 1000 objects in the pool
 		},
 	}
 

@@ -38,9 +38,6 @@ type CleanupPolicy struct {
 	Interval time.Duration
 	// MinUsageCount is the number of usage below which an object will be evicted
 	MinUsageCount int64
-	// TargetSize is the target number of objects to attempt to keep during cleanup
-	// If 0, no target size is enforced
-	TargetSize int
 }
 
 // DefaultCleanupPolicy returns a default cleanup configuration
@@ -49,7 +46,6 @@ func DefaultCleanupPolicy() CleanupPolicy {
 		Enabled:       false,
 		Interval:      5 * time.Minute,
 		MinUsageCount: 1,
-		TargetSize:    0,
 	}
 }
 
@@ -156,9 +152,6 @@ func NewPoolWithConfig[T Poolable](cfg PoolConfig[T]) (*ShardedPool[T], error) {
 		if cfg.Cleanup.MinUsageCount <= 0 {
 			return nil, errors.New("minimum usage count must be greater than 0")
 		}
-		if cfg.Cleanup.TargetSize < 0 {
-			return nil, errors.New("target size can't be negative")
-		}
 		p.startCleaner()
 	}
 
@@ -226,18 +219,26 @@ func (p *ShardedPool[T]) retrieveFromShard(shard *PoolShard[T]) (zero T, success
 // Clear removes all objects from the pool
 func (p *ShardedPool[T]) clear() {
 	var zero T
-	for _, shard := range p.shards {
-		current := shard.head.Load().(T)
 
-		if !reflect.ValueOf(current).IsNil() {
+	for _, shard := range p.shards {
+		for {
+			current := shard.head.Load().(T)
+			if reflect.ValueOf(current).IsNil() {
+				break
+			}
+
 			if shard.head.CompareAndSwap(current, zero) {
+				// We have successfully taken the list.
+				// Now iterate and clean it.
 				for !reflect.ValueOf(current).IsNil() {
 					next := current.GetNext()
 					current.SetNext(zero)
 					p.cfg.Cleaner(current)
 					current = next.(T)
 				}
+				break // move to next shard
 			}
+			// Lost the race, try again on the same shard.
 		}
 	}
 }
@@ -273,49 +274,67 @@ func (p *ShardedPool[T]) cleanup() {
 }
 
 func (p *ShardedPool[T]) cleanupShard(shard *PoolShard[T]) {
-	var current, prev T
-	var kept int
 	var zero T
 
-	current = shard.head.Load().(T)
-
-	if reflect.ValueOf(current).IsNil() {
+	// Atomically take the entire list from the shard.
+	oldHeadAny := shard.head.Load()
+	if oldHeadAny == nil {
 		return
 	}
+
+	oldHead := oldHeadAny.(T)
+	if reflect.ValueOf(oldHead).IsNil() {
+		return
+	}
+
+	if !shard.head.CompareAndSwap(oldHead, zero) {
+		// The list was modified by another goroutine. We'll just skip this cleanup cycle for this shard
+		// and try again on the next tick. This is a simple, low-contention strategy.
+		return
+	}
+
+	// We now have exclusive ownership of the list starting at oldHead.
+	current := oldHead
+	var keptHead, keptTail T
 
 	for !reflect.ValueOf(current).IsNil() {
 		next := current.GetNext()
 		usageCount := current.GetUsageCount()
 
-		metMinUsageCount := usageCount >= p.cfg.Cleanup.MinUsageCount
-		targetDisabled := p.cfg.Cleanup.TargetSize <= 0
-
-		shardQuota := 1
-		if p.cfg.Cleanup.TargetSize > 0 {
-			shardQuota = max(1, p.cfg.Cleanup.TargetSize/numShards)
-		}
-		underShardQuota := kept < shardQuota
-
-		shouldKeep := metMinUsageCount && (targetDisabled || underShardQuota)
-		if shouldKeep {
+		if usageCount >= p.cfg.Cleanup.MinUsageCount {
+			// This item is kept.
 			current.ResetUsage()
-			prev = current
-			kept++
-		} else {
-			if reflect.ValueOf(prev).IsNil() {
-				if reflect.ValueOf(next).IsNil() {
-					shard.head.Store(zero)
-				} else {
-					shard.head.Store(next)
-				}
+			if reflect.ValueOf(keptHead).IsNil() {
+				keptHead = current
 			} else {
-				prev.SetNext(next)
+				keptTail.SetNext(current)
 			}
-
+			keptTail = current
+		} else {
+			// This item is discarded. Set next to nil to break chain.
 			current.SetNext(zero)
 		}
-
 		current = next.(T)
+	}
+
+	// If any items were kept, we need to add them back to the shard's list.
+	if !reflect.ValueOf(keptHead).IsNil() {
+		keptTail.SetNext(zero) // Terminate our list of kept items.
+
+		// Atomically prepend the list of kept items to the shard's current list.
+		for {
+			currentHead := shard.head.Load()
+			var nextForTail T
+			if currentHead != nil {
+				nextForTail = currentHead.(T)
+			}
+			keptTail.SetNext(nextForTail)
+
+			if shard.head.CompareAndSwap(currentHead, keptHead) {
+				break
+			}
+			// Contention: The head of the shard's list was modified. Retry.
+		}
 	}
 }
 
