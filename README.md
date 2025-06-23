@@ -149,7 +149,7 @@ We welcome contributions! Before you start contributing, please ensure you have:
 
 ```bash
 # Fork and clone the repository
-git clone https://github.com/YOUR_USERNAME/GenPool.git
+git clone https://github.com/AlexsanderHamir/GenPool.git
 cd GenPool
 
 # Install dependencies
