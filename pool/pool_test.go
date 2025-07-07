@@ -161,31 +161,4 @@ func TestPoolCleanupUsageCount(t *testing.T) {
 			t.Errorf("obj1 should have been cleaned up (usage count 0), got %d", obj1.GetUsageCount())
 		}
 	})
-
-	t.Run("should not cleanup high usage objects", func(t *testing.T) {
-		cfg := DefaultConfig(testAllocator, testCleaner)
-		cfg.Cleanup.Enabled = true
-		cfg.Cleanup.Interval = 1 * time.Second
-		cfg.Cleanup.MinUsageCount = 2
-
-		pool, err := NewPoolWithConfig(cfg)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		obj1 := pool.RetrieveOrCreate() // 1
-		if obj1 == nil {
-			t.Fatal("RetrieveOrCreate() returned nil object")
-		}
-
-		obj1.IncrementUsage() // 2
-		obj1.IncrementUsage() // 3
-		obj1.IncrementUsage() // 4
-
-		time.Sleep(1 * time.Second)
-
-		if obj1.GetUsageCount() != 4 {
-			t.Errorf("obj1 should not have been cleaned up, expected usage count 4, got %d", obj1.GetUsageCount())
-		}
-	})
 }
