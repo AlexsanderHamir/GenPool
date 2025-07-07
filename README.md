@@ -19,6 +19,7 @@ GenPool delivers sync.Pool-level performance with the added benefit of configura
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Contributing](#contributing)
+- [Complete Example](#complete-example)
 - [License](#license)
 
 ## Performance
@@ -163,6 +164,10 @@ go test -bench=. ./...
 - Follow Go code style guidelines
 - Update documentation for user-facing changes
 - Ensure all tests pass before submitting PRs
+
+## Complete Example
+
+For a fully working example with its own Go module, see the [example](./example) directory.
 
 ## License
 

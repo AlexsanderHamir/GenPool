@@ -1,6 +1,6 @@
 docs/ export-ignore
-docs/** export-ignore
-benchmark_results_transparency/** export-ignore
+benchmark_results_transparency/ export-ignore
+example/ export-ignore
 
 .github/** export-ignore
 .vscode/** export-ignore
