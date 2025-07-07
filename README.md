@@ -29,7 +29,7 @@ For a detailed breakdown of the performance go to [GenPool vs SyncPool](./benchm
 
 > In most benchmarks, GenPool performs on par with sync.Pool. Under high concurrency, GenPool often delivers slightly lower latency, reduced memory usage, and less contention—though the differences are typically small (e.g., ~20ns faster and ~1–3 bytes lighter per operation).
 
-> **Performance Tip**: For maximum performance in high-contention scenarios, ensure that your pooled objects have their interface fields (`usageCount` and `next`) on their own cache line by adding appropriate padding. This prevents false sharing and cache line bouncing between CPU cores. See the [benchmark test file](./pool/pool_benchmark_test.go) for an example implementation.
+> **Performance Tip**: For maximum performance in high-contention scenarios, ensure that your pooled objects have their interface fields (`usageCount` and `next`) on their own cache line by adding appropriate padding. This prevents false sharing and cache line bouncing between CPU cores.
 
 ## References
 
@@ -65,7 +65,6 @@ type Object struct {
 	Data       []byte
 	usageCount atomic.Int64
 	next       atomic.Value
-	_          [40]byte
 }
 
 func (o *Object) GetNext() pool.Poolable {

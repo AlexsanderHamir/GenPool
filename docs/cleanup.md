@@ -6,7 +6,6 @@ This two-pass approach ensures that objects which were heavily used in the past 
 
 By resetting the usage count only for retained objects, the system gives every object a fair chance to prove recent utility before eviction—encouraging temporal locality and keeping the pool fresh.
 
-
 ````go
 
     func (p *ShardedPool[T]) cleanupShard(shard *PoolShard[T]) {
@@ -29,10 +28,11 @@ By resetting the usage count only for retained objects, the system gives every o
 
 		metMinUsageCount := usageCount >= p.cfg.Cleanup.MinUsageCount
 		targetDisabled := p.cfg.Cleanup.TargetSize <= 0
+
 		// Ensure at least 1 object per shard when TargetSize is set
 		shardQuota := 1
 		if p.cfg.Cleanup.TargetSize > 0 {
-			shardQuota = max(1, p.cfg.Cleanup.TargetSize/numShards)
+			shardQuota = max(shardQuota, p.cfg.Cleanup.TargetSize/numShards)
 		}
 		underShardQuota := kept < shardQuota
 
