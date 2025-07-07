@@ -52,88 +52,84 @@ Here's a simple example of how to use the object pool:
 package main
 
 import (
-    "fmt"
-    "github.com/AlexsanderHamir/GenPool/pool"
+	"sync/atomic"
+	"time"
+
+	"github.com/AlexsanderHamir/GenPool/pool"
 )
 
 // Your Object must implement the Poolable interface
-type BenchmarkObject struct {
- // user fields
-	Name string   // 16 bytes
-	Data []byte   // 24 bytes
-	_    [24]byte // 24 bytes = 64 bytes
-
-	// interface necessary fields (kept together since they're modified together)
-	usageCount atomic.Int64 // 8 bytes
-	next       atomic.Value // 16 bytes
-	_          [40]byte     // 40 bytes padding to make struct 128 bytes (2 cache lines)
+// An atomic linked list is created and sharded (cpu number) out of the objects you want to pool.
+type Object struct {
+	Name       string
+	Data       []byte
+	usageCount atomic.Int64
+	next       atomic.Value
+	_          [40]byte
 }
 
-func (o *BenchmarkObject) GetNext() Poolable {
-    if next := o.next.Load(); next != nil {
-        return next.(Poolable)
-    }
-    return nil
+func (o *Object) GetNext() pool.Poolable {
+	if next := o.next.Load(); next != nil {
+		return next.(pool.Poolable)
+	}
+	return nil
 }
 
-func (o *BenchmarkObject) SetNext(next Poolable) {
-    o.next.Store(next)
+func (o *Object) SetNext(next pool.Poolable) {
+	o.next.Store(next)
 }
 
-func (o *BenchmarkObject) GetUsageCount() int64 {
-    return o.usageCount.Load()
+func (o *Object) GetUsageCount() int64 {
+	return o.usageCount.Load()
 }
 
-func (o *BenchmarkObject) IncrementUsage() {
-    o.usageCount.Add(1)
+func (o *Object) IncrementUsage() {
+	o.usageCount.Add(1)
 }
 
-func (o *BenchmarkObject) ResetUsage() {
-    o.usageCount.Store(0)
+func (o *Object) ResetUsage() {
+	o.usageCount.Store(0)
 }
 
-// Example using NewPoolWithConfig with custom configuration
+func allocator() *Object {
+	return &Object{Name: "test"}
+}
+
+func cleaner(obj *Object) {
+	obj.Name = ""
+	obj.Data = obj.Data[:0]
+}
+
 func main() {
-    func allocator() *BenchmarkObject {
-	    return &BenchmarkObject{Name: "test"}
-    }
 
-    func cleaner(obj *BenchmarkObject) {
-	    obj.Name = ""
-	    obj.Data = obj.Data[:0]
-    }
+	// Create custom cleanup policy
+	cleanupPolicy := pool.CleanupPolicy{
+		Enabled:       true,
+		Interval:      10 * time.Minute,
+		MinUsageCount: 20,
+	}
 
-    // Create custom cleanup policy
-    cleanupPolicy := pool.CleanupPolicy{
-        Enabled:       true,
-        Interval:      10 * time.Minute,
-        MinUsageCount: 20,
-    }
+	// Create pool with custom configuration
+	config := pool.PoolConfig[*Object]{
+		Cleanup:   cleanupPolicy,
+		Allocator: allocator,
+		Cleaner:   cleaner,
+	}
 
-    // Create pool with custom configuration
-    config := pool.PoolConfig[*BenchmarkObject]{
-        Cleanup:   cleanupPolicy,
-        Allocator: allocator,
-        Cleaner:   cleaner,
-    }
+	benchPool, err := pool.NewPoolWithConfig(config)
+	if err != nil {
+		panic(err)
+	}
 
-    pool, err := pool.NewPoolWithConfig(config)
-    if err != nil {
-        panic(err)
-    }
+	// Use the pool as before...
+	obj := benchPool.RetrieveOrCreate()
 
-    // Use the pool as before...
-    obj, err := pool.RetrieveOrCreate()
-    if err != nil {
-        panic(err)
-    }
+	// Use the object
+	obj.Name = "Robert"
+	obj.Data = append(obj.Data, 34)
 
-    // Use the object
-    obj.Value = 42
-    obj.Name = "Robert"
-
-    // Return the object to the pool
-    pool.Put(obj)
+	// Return the object to the pool
+	benchPool.Put(obj)
 }
 ```
 
