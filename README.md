@@ -148,10 +148,6 @@ We welcome contributions! Before you start contributing, please ensure you have:
 git clone https://github.com/AlexsanderHamir/GenPool.git
 cd GenPool
 
-# Install dependencies
-go mod download
-go mod tidy
-
 # Run tests to verify setup
 go test -v ./...
 go test -bench=. ./...
