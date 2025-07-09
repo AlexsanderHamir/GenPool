@@ -26,11 +26,43 @@ GenPool delivers sync.Pool-level performance with the added benefit of configura
 
 Choose GenPool when you need finer control over object lifecycle, especially in scenarios where predictable reclamation and reuse patterns are critical.
 
-For a detailed breakdown of the performance go to [GenPool vs SyncPool](./benchmark_results_transparency)
+### Benchmark Comparison
 
-> In most benchmarks, GenPool performs on par with sync.Pool. Under high concurrency, GenPool often delivers slightly lower latency, reduced memory usage, and less contention—though the differences are typically small (e.g., ~20ns faster and ~1–3 bytes lighter per operation).
+#### GenPool
 
-> **Performance Tip**: For maximum performance in high-contention scenarios, ensure that your pooled objects have their interface fields (`usageCount` and `next`) on their own cache line by adding appropriate padding. This prevents false sharing and cache line bouncing between CPU cores.
+|  Metric |  ns/op | Bytes/op | Allocs/op |
+| ------: | -----: | -------: | --------: |
+| Average | 1539.8 |      3.2 |         0 |
+|     Min |   1535 |        2 |         0 |
+|     Max |   1572 |        5 |         0 |
+|     p50 |   1538 |        — |         — |
+|     p95 |   1554 |        — |         — |
+|     p99 |   1572 |        — |         — |
+
+#### sync.Pool
+
+|  Metric |  ns/op | Bytes/op | Allocs/op |
+| ------: | -----: | -------: | --------: |
+| Average | 1528.1 |      3.3 |         0 |
+|     Min |   1524 |        2 |         0 |
+|     Max |   1559 |        5 |         0 |
+|     p50 |   1527 |        — |         — |
+|     p95 |   1546 |        — |         — |
+|     p99 |   1559 |        — |         — |
+
+> **Detailed results available at:** [GenPool vs sync.Pool](./benchmark_results_transparency)
+
+### Summary
+
+- GenPool performs similarly to `sync.Pool` in most cases.
+- Under high concurrency / high latency, it offers slightly better performance:
+  - ~20ns faster per operation
+  - ~1–2 bytes less memory used
+  - Lower contention and smoother latency
+
+### ⚙️ Performance Tip
+
+For best results under contention, place fields like `usageCount` and `next` on separate cache lines (add padding if needed). This avoids false sharing and improves cache performance across cores.
 
 ## References
 
