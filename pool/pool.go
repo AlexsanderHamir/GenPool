@@ -310,7 +310,7 @@ func (p *ShardedPool[T]) cleanupShard(shard *PoolShard[T]) {
 			}
 			keptTail = current
 		} else {
-			// This item is discarded. Set next to nil to break chain.
+			// This item is discarded
 			current.SetNext(zero)
 		}
 		current = next.(T)

@@ -145,7 +145,7 @@ func BenchmarkGenPoolAggressiveCleanup(b *testing.B) {
 		Cleaner:   cleaner,
 		Cleanup: CleanupPolicy{
 			Enabled:       true,
-			Interval:      500 * time.Millisecond,
+			Interval:      10 * time.Millisecond,
 			MinUsageCount: 1,
 		},
 	}

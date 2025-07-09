@@ -24,7 +24,7 @@ GenPool delivers sync.Pool-level performance with the added benefit of configura
 
 ## Performance
 
-Choose GenPool when you need finer control over object lifecycle, especially in scenarios where predictable reclamation and reuse patterns are critical, instead of aggressive object reclamantion.
+Choose GenPool when you need finer control over object lifecycle, especially in scenarios where predictable reclamation and reuse patterns are critical.
 
 For a detailed breakdown of the performance go to [GenPool vs SyncPool](./benchmark_results_transparency)
 
@@ -106,7 +106,7 @@ func main() {
 	cleanupPolicy := pool.CleanupPolicy{
 		Enabled:       true,
 		Interval:      10 * time.Minute,
-		MinUsageCount: 20,
+		MinUsageCount: 20, // eviction happens up until this number of usage per object
 	}
 
 	// Create pool with custom configuration
@@ -121,7 +121,7 @@ func main() {
 		panic(err)
 	}
 
-	// Use the pool as before...
+
 	obj := benchPool.RetrieveOrCreate()
 
 	// Use the object
@@ -157,7 +157,6 @@ go test -bench=. ./...
 
 - Write tests for new functionality
 - Run benchmarks to ensure no performance regressions
-- Follow Go code style guidelines
 - Update documentation for user-facing changes
 - Ensure all tests pass before submitting PRs
 
