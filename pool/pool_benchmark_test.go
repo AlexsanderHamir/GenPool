@@ -7,6 +7,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/AlexsanderHamir/GenPool/pool/alternative"
 )
 
 // BenchmarkObject is a simple struct we'll use for benchmarking
@@ -201,6 +203,63 @@ func benchmarkPoolWithConfig(b *testing.B, cfg PoolConfig[*BenchmarkObject]) {
 			}
 
 			performWorkload(obj)
+
+			pool.Put(obj)
+		}
+	})
+}
+
+type Object struct {
+	Name string
+	Data []byte
+}
+
+var allocator2 = func() *Object {
+	return &Object{
+		Name: "",
+		Data: make([]byte, 0, 1024), // Pre-allocate capacity
+	}
+}
+
+var cleaner2 = func(obj *Object) {
+	obj.Name = ""
+	obj.Data = obj.Data[:0] // Reset slice but keep capacity
+}
+
+// never repeat yourself kids
+func performWorkload2(obj *Object) {
+	obj.Name = "test"
+
+	// Simulate CPU-intensive work
+	for range 1000 {
+		obj.Data = append(obj.Data, byte(rand.Intn(256)))
+	}
+
+	// Simulate some I/O or network delay
+	time.Sleep(time.Microsecond * 10)
+}
+
+func BenchmarkGenPoolAlternative(b *testing.B) {
+	cfg := alternative.PoolConfig[*Object]{
+		Allocator: allocator2,
+		Cleaner:   cleaner2,
+	}
+
+	pool, err := alternative.NewPoolWithConfig(cfg)
+	if err != nil {
+		b.Fatalf("error creating pool: %v", err)
+	}
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			obj := pool.RetrieveOrCreate()
+
+			if obj == nil {
+				b.Fatal("obj is nil")
+			}
+
+			performWorkload2(obj)
 
 			pool.Put(obj)
 		}

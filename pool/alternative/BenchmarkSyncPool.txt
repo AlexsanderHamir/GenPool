@@ -1,0 +1,36 @@
+goos: darwin
+goarch: arm64
+pkg: github.com/AlexsanderHamir/GenPool/pool
+cpu: Apple M1
+BenchmarkSyncPool-8   	  755484	      1659 ns/op	       4 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  704562	      1644 ns/op	       4 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  713082	      1632 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  695311	      1647 ns/op	       5 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  667936	      1664 ns/op	       6 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  631594	      1698 ns/op	       4 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  707476	      1698 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  672154	      1671 ns/op	       2 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  696442	      1687 ns/op	       4 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  684841	      1689 ns/op	       2 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  686130	      1702 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  673852	      1677 ns/op	       4 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  691267	      1709 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  682737	      1718 ns/op	       4 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  697342	      1731 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  672769	      1709 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  675609	      1686 ns/op	       4 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  682966	      1703 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  670852	      1692 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  650702	      1735 ns/op	       4 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  631478	      1737 ns/op	       4 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  667502	      1718 ns/op	       4 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  639741	      1726 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  684922	      1730 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  638066	      1757 ns/op	       4 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  597856	      1757 ns/op	       4 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  693537	      1712 ns/op	       4 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  668912	      1756 ns/op	       4 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  642363	      1754 ns/op	       4 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  702409	      1645 ns/op	       3 B/op	       0 allocs/op
+PASS
+ok  	github.com/AlexsanderHamir/GenPool/pool	36.323s
