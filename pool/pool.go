@@ -3,7 +3,6 @@ package pool
 import (
 	"errors"
 	"fmt"
-	"reflect"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -13,17 +12,11 @@ import (
 
 // Common errors that may be returned by the pool
 var (
-	// ErrNonPointerType is returned when attempting to create a pool with a non-pointer type
-	ErrNonPointerType = fmt.Errorf("type must be a pointer type")
-
 	// ErrNoAllocator is returned when attempting to get an object but no allocator is configured
 	ErrNoAllocator = fmt.Errorf("no allocator configured")
 
 	// ErrNoCleaner is returned when attempting to create a pool but no cleaner is configured
 	ErrNoCleaner = fmt.Errorf("no cleaner configured")
-
-	// ErrCleanerFailed is returned when the cleaner function fails to clean an object
-	ErrCleanerFailed = fmt.Errorf("cleaner failed")
 )
 
 var (
@@ -50,17 +43,18 @@ func DefaultCleanupPolicy() CleanupPolicy {
 }
 
 // Allocator is a function type that creates new objects for the pool
-type Allocator[T any] func() T
+type Allocator[T any] func() *T
 
 // Cleaner is a function type that cleans up objects before they are returned to the pool
-type Cleaner[T any] func(T)
+type Cleaner[T any] func(*T)
 
 // Poolable is an interface that objects must implement to be stored in the pool
-type Poolable interface {
+type Poolable[T any] interface {
+	*T
 	// GetNext returns the next object in the pool's linked list
-	GetNext() Poolable
+	GetNext() *T
 	// SetNext sets the next object in the pool's linked list
-	SetNext(next Poolable)
+	SetNext(next *T)
 	// GetUsageCount returns the number of times this object has been used
 	GetUsageCount() int64
 	// IncrementUsage increments the usage count of this object
@@ -70,7 +64,7 @@ type Poolable interface {
 }
 
 // PoolConfig holds configuration options for the pool
-type PoolConfig[T Poolable] struct {
+type PoolConfig[T any, P Poolable[T]] struct {
 	// Cleanup defines the cleanup policy for the pool
 	Cleanup CleanupPolicy
 	// Allocator is the function to create new objects
@@ -80,8 +74,8 @@ type PoolConfig[T Poolable] struct {
 }
 
 // DefaultConfig returns a default pool configuration for type T
-func DefaultConfig[T Poolable](allocator Allocator[T], cleaner Cleaner[T]) PoolConfig[T] {
-	return PoolConfig[T]{
+func DefaultConfig[T any, P Poolable[T]](allocator Allocator[T], cleaner Cleaner[T]) PoolConfig[T, P] {
+	return PoolConfig[T, P]{
 		Cleanup:   DefaultCleanupPolicy(),
 		Allocator: allocator,
 		Cleaner:   cleaner,
@@ -89,18 +83,18 @@ func DefaultConfig[T Poolable](allocator Allocator[T], cleaner Cleaner[T]) PoolC
 }
 
 // PoolShard represents a single shard in the pool
-type PoolShard[T Poolable] struct {
+type PoolShard[T any, P Poolable[T]] struct {
 	// head is the head of the linked list for this shard
-	head atomic.Value // T
+	head atomic.Pointer[T]
 
 	// pad ensures each shard is on its own cache line
-	_ [64 - unsafe.Sizeof(atomic.Value{})%64]byte
+	_ [64 - unsafe.Sizeof(atomic.Pointer[P]{})%64]byte
 }
 
 // ShardedPool is the main pool implementation using sharding for better concurrency
-type ShardedPool[T Poolable] struct {
+type ShardedPool[T any, P Poolable[T]] struct {
 	// shards is a slice of pool shards, each on its own cache line
-	shards []*PoolShard[T]
+	shards []*PoolShard[T, P]
 
 	// stopClean signals the cleanup goroutine to stop
 	stopClean chan struct{}
@@ -109,23 +103,16 @@ type ShardedPool[T Poolable] struct {
 	cleanWg sync.WaitGroup
 
 	// cfg holds the pool configuration
-	cfg PoolConfig[T]
+	cfg PoolConfig[T, P]
 }
 
 // NewPool creates a new sharded pool with the given configuration
-func NewPool[T Poolable](allocator Allocator[T], cleaner Cleaner[T]) (*ShardedPool[T], error) {
-	var zero T
-	t := reflect.TypeOf(zero)
-	if t.Kind() != reflect.Ptr {
-		return nil, fmt.Errorf("%w, got %T", ErrNonPointerType, zero)
-	}
-
-	cfg := DefaultConfig(allocator, cleaner)
-	return NewPoolWithConfig(cfg)
+func NewPool[T any, P Poolable[T]](allocator Allocator[T], cleaner Cleaner[T]) (*ShardedPool[T, P], error) {
+	return NewPoolWithConfig(DefaultConfig[T, P](allocator, cleaner))
 }
 
 // NewPoolWithConfig creates a new sharded pool with the specified configuration
-func NewPoolWithConfig[T Poolable](cfg PoolConfig[T]) (*ShardedPool[T], error) {
+func NewPoolWithConfig[T any, P Poolable[T]](cfg PoolConfig[T, P]) (*ShardedPool[T, P], error) {
 	if cfg.Allocator == nil {
 		return nil, fmt.Errorf("%w: allocator is required", ErrNoAllocator)
 	}
@@ -133,16 +120,15 @@ func NewPoolWithConfig[T Poolable](cfg PoolConfig[T]) (*ShardedPool[T], error) {
 		return nil, fmt.Errorf("%w: cleaner is required", ErrNoCleaner)
 	}
 
-	p := &ShardedPool[T]{
+	p := &ShardedPool[T, P]{
 		cfg:       cfg,
 		stopClean: make(chan struct{}),
-		shards:    make([]*PoolShard[T], numShards),
+		shards:    make([]*PoolShard[T, P], numShards),
 	}
 
-	var zero T
 	for i := range p.shards {
-		p.shards[i] = &PoolShard[T]{}
-		p.shards[i].head.Store(zero)
+		p.shards[i] = &PoolShard[T, P]{}
+		p.shards[i].head.Store(nil)
 	}
 
 	if cfg.Cleanup.Enabled {
@@ -159,7 +145,7 @@ func NewPoolWithConfig[T Poolable](cfg PoolConfig[T]) (*ShardedPool[T], error) {
 }
 
 // getShard returns the shard for the current goroutine
-func (p *ShardedPool[T]) getShard() *PoolShard[T] {
+func (p *ShardedPool[T, P]) getShard() *PoolShard[T, P] {
 	// Use goroutine's processor ID for shard selection
 	// This provides better locality for goroutines that frequently access the pool
 	id := runtime_procPin()
@@ -169,7 +155,7 @@ func (p *ShardedPool[T]) getShard() *PoolShard[T] {
 }
 
 // RetrieveOrCreate gets an object from the pool or creates a new one
-func (p *ShardedPool[T]) RetrieveOrCreate() T {
+func (p *ShardedPool[T, P]) RetrieveOrCreate() P {
 	shard := p.getShard()
 
 	// Try to get an object from the shard
@@ -179,18 +165,18 @@ func (p *ShardedPool[T]) RetrieveOrCreate() T {
 	}
 
 	// Create a new object if none available
-	obj := p.cfg.Allocator()
+	obj := P(p.cfg.Allocator())
 	obj.IncrementUsage()
 	return obj
 }
 
 // Put returns an object to the pool
-func (p *ShardedPool[T]) Put(obj T) {
+func (p *ShardedPool[T, P]) Put(obj P) {
 	p.cfg.Cleaner(obj)
 	shard := p.getShard()
 
 	for {
-		oldHead := shard.head.Load().(T)
+		oldHead := P(shard.head.Load())
 
 		if shard.head.CompareAndSwap(oldHead, obj) {
 			obj.SetNext(oldHead)
@@ -200,11 +186,11 @@ func (p *ShardedPool[T]) Put(obj T) {
 }
 
 // retrieveFromShard gets an object from a specific shard
-func (p *ShardedPool[T]) retrieveFromShard(shard *PoolShard[T]) (zero T, success bool) {
+func (p *ShardedPool[T, P]) retrieveFromShard(shard *PoolShard[T, P]) (zero P, success bool) {
 	for {
-		oldHead := shard.head.Load().(T)
+		oldHead := P(shard.head.Load())
 
-		if reflect.ValueOf(oldHead).IsNil() {
+		if oldHead == nil {
 			return zero, false
 		}
 
@@ -216,24 +202,22 @@ func (p *ShardedPool[T]) retrieveFromShard(shard *PoolShard[T]) (zero T, success
 }
 
 // Clear removes all objects from the pool
-func (p *ShardedPool[T]) clear() {
-	var zero T
-
+func (p *ShardedPool[T, P]) clear() {
 	for _, shard := range p.shards {
 		for {
-			current := shard.head.Load().(T)
-			if reflect.ValueOf(current).IsNil() {
+			current := P(shard.head.Load())
+			if current == nil {
 				break
 			}
 
-			if shard.head.CompareAndSwap(current, zero) {
+			if shard.head.CompareAndSwap(current, nil) {
 				// We have successfully taken the list.
 				// Now iterate and clean it.
-				for !reflect.ValueOf(current).IsNil() {
+				for current != nil {
 					next := current.GetNext()
-					current.SetNext(zero)
+					current.SetNext(nil)
 					p.cfg.Cleaner(current)
-					current = next.(T)
+					current = next
 				}
 				break // move to next shard
 			}
@@ -243,7 +227,7 @@ func (p *ShardedPool[T]) clear() {
 }
 
 // startCleaner starts the background cleanup goroutine
-func (p *ShardedPool[T]) startCleaner() {
+func (p *ShardedPool[T, P]) startCleaner() {
 	p.cleanWg.Add(1)
 	go func() {
 		defer p.cleanWg.Done()
@@ -262,7 +246,7 @@ func (p *ShardedPool[T]) startCleaner() {
 }
 
 // cleanup removes idle objects based on the cleanup policy
-func (p *ShardedPool[T]) cleanup() {
+func (p *ShardedPool[T, P]) cleanup() {
 	if !p.cfg.Cleanup.Enabled {
 		return
 	}
@@ -272,21 +256,14 @@ func (p *ShardedPool[T]) cleanup() {
 	}
 }
 
-func (p *ShardedPool[T]) cleanupShard(shard *PoolShard[T]) {
-	var zero T
-
+func (p *ShardedPool[T, P]) cleanupShard(shard *PoolShard[T, P]) {
 	// Atomically take the entire list from the shard.
-	oldHeadAny := shard.head.Load()
-	if oldHeadAny == nil {
+	oldHead := P(shard.head.Load())
+	if oldHead == nil {
 		return
 	}
 
-	oldHead := oldHeadAny.(T)
-	if reflect.ValueOf(oldHead).IsNil() {
-		return
-	}
-
-	if !shard.head.CompareAndSwap(oldHead, zero) {
+	if !shard.head.CompareAndSwap(oldHead, nil) {
 		// The list was modified by another goroutine. We'll just skip this cleanup cycle for this shard
 		// and try again on the next tick. This is a simple, low-contention strategy.
 		return
@@ -294,16 +271,18 @@ func (p *ShardedPool[T]) cleanupShard(shard *PoolShard[T]) {
 
 	// We now have exclusive ownership of the list starting at oldHead.
 	current := oldHead
-	var keptHead, keptTail T
+	var keptHead P
 
-	for !reflect.ValueOf(current).IsNil() {
+	keptTail := P(new(T))
+
+	for current != nil {
 		next := current.GetNext()
 		usageCount := current.GetUsageCount()
 
 		if usageCount >= p.cfg.Cleanup.MinUsageCount {
 			// This item is kept.
 			current.ResetUsage()
-			if reflect.ValueOf(keptHead).IsNil() {
+			if keptHead == nil {
 				keptHead = current
 			} else {
 				keptTail.SetNext(current)
@@ -311,21 +290,21 @@ func (p *ShardedPool[T]) cleanupShard(shard *PoolShard[T]) {
 			keptTail = current
 		} else {
 			// This item is discarded
-			current.SetNext(zero)
+			current.SetNext(nil)
 		}
-		current = next.(T)
+		current = next
 	}
 
 	// If any items were kept, we need to add them back to the shard's list.
-	if !reflect.ValueOf(keptHead).IsNil() {
-		keptTail.SetNext(zero) // Terminate our list of kept items.
+	if keptHead != nil {
+		keptTail.SetNext(nil) // Terminate our list of kept items.
 
 		// Atomically prepend the list of kept items to the shard's current list.
 		for {
-			currentHead := shard.head.Load()
-			var nextForTail T
+			currentHead := P(shard.head.Load())
+			var nextForTail P
 			if currentHead != nil {
-				nextForTail = currentHead.(T)
+				nextForTail = currentHead
 			}
 			keptTail.SetNext(nextForTail)
 
@@ -338,7 +317,7 @@ func (p *ShardedPool[T]) cleanupShard(shard *PoolShard[T]) {
 }
 
 // Close stops the cleanup goroutine and clears the pool
-func (p *ShardedPool[T]) Close() {
+func (p *ShardedPool[T, P]) Close() {
 	if p.cfg.Cleanup.Enabled {
 		close(p.stopClean)
 		p.cleanWg.Wait()

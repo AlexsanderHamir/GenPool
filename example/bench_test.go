@@ -13,17 +13,17 @@ type Object struct {
 	Name       string
 	Data       []byte
 	usageCount atomic.Int64
-	next       atomic.Value
+	next       atomic.Pointer[Object]
 }
 
-func (o *Object) GetNext() pool.Poolable {
+func (o *Object) GetNext() *Object {
 	if next := o.next.Load(); next != nil {
-		return next.(pool.Poolable)
+		return next
 	}
 	return nil
 }
 
-func (o *Object) SetNext(next pool.Poolable) {
+func (o *Object) SetNext(next *Object) {
 	o.next.Store(next)
 }
 
@@ -51,8 +51,8 @@ func cleaner(obj *Object) {
 	obj.Data = obj.Data[:0]
 }
 
-func createPool() *pool.ShardedPool[*Object] {
-	config := pool.PoolConfig[*Object]{
+func createPool() *pool.ShardedPool[Object, *Object] {
+	config := pool.PoolConfig[Object, *Object]{
 		Allocator: allocator,
 		Cleaner:   cleaner,
 		Cleanup: pool.CleanupPolicy{

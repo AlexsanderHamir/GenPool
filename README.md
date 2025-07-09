@@ -91,23 +91,23 @@ import (
 	"github.com/AlexsanderHamir/GenPool/pool"
 )
 
-// Your Object must implement the Poolable interface
+// Object implements the Poolable type constraint
 // An atomic linked list is created and sharded (cpu number) out of the objects you want to pool.
 type Object struct {
 	Name       string
 	Data       []byte
 	usageCount atomic.Int64
-	next       atomic.Value
+	next       atomic.Pointer[Object]
 }
 
-func (o *Object) GetNext() pool.Poolable {
+func (o *Object) GetNext() *Object {
 	if next := o.next.Load(); next != nil {
-		return next.(pool.Poolable)
+		return next
 	}
 	return nil
 }
 
-func (o *Object) SetNext(next pool.Poolable) {
+func (o *Object) SetNext(next *Object) {
 	o.next.Store(next)
 }
 
@@ -142,7 +142,7 @@ func main() {
 	}
 
 	// Create pool with custom configuration
-	config := pool.PoolConfig[*Object]{
+	config := pool.PoolConfig[Object, *Object]{
 		Cleanup:   cleanupPolicy,
 		Allocator: allocator,
 		Cleaner:   cleaner,

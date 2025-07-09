@@ -1,6 +1,6 @@
 # Minimal Object Pool Design
 
-This object pool uses an atomic singly linked list built from the provided objects themselves to manage the pool efficiently, reducing indirection and allocations. Each object maintains a pointer to the next one using `atomic.Value`, allowing lock-free access and updates.
+This object pool uses an atomic singly linked list built from the provided objects themselves to manage the pool efficiently, reducing indirection and allocations. Each object maintains a pointer to the next one using `atomic.Pointer`, allowing lock-free access and updates.
 
 The pool implements **sharding** by maintaining **X** independent linked lists up to the number of logical cores, two runtime functions are used `runtime_procPin` and `runtime_procUnpin`, which are low-level Go runtime functions that:
 

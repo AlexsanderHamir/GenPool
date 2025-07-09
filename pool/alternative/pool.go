@@ -1,11 +1,10 @@
-// For anybody that doesn't like the intrusive style here's an alternative, feel free to improve it
-// and benchmark it to see if it matches your desired performance for your use case.
+// Package alternative is for anybody that doesn't like the intrusive style here's an alternative,
+// feel free to improve it and benchmark it to see if it matches your desired performance for your use case.
 package alternative
 
 import (
 	"errors"
 	"fmt"
-	"reflect"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -15,17 +14,11 @@ import (
 
 // Common errors that may be returned by the pool
 var (
-	// ErrNonPointerType is returned when attempting to create a pool with a non-pointer type
-	ErrNonPointerType = fmt.Errorf("type must be a pointer type")
-
 	// ErrNoAllocator is returned when attempting to get an object but no allocator is configured
 	ErrNoAllocator = fmt.Errorf("no allocator configured")
 
 	// ErrNoCleaner is returned when attempting to create a pool but no cleaner is configured
 	ErrNoCleaner = fmt.Errorf("no cleaner configured")
-
-	// ErrCleanerFailed is returned when the cleaner function fails to clean an object
-	ErrCleanerFailed = fmt.Errorf("cleaner failed")
 )
 
 var (
@@ -52,22 +45,22 @@ func DefaultCleanupPolicy() CleanupPolicy {
 }
 
 // Allocator is a function type that creates new objects for the pool
-type Allocator[T any] func() T
+type Allocator[T any] func() *T
 
 // Cleaner is a function type that cleans up objects before they are returned to the pool
-type Cleaner[T any] func(T)
+type Cleaner[T any] func(*T)
 
 // PoolObject wraps any type to make it suitable for pooling
 type PoolObject[T any] struct {
-	Inner      T
+	Inner      *T
 	usageCount atomic.Int64
-	next       atomic.Value // *PoolObject[T]
+	next       atomic.Pointer[PoolObject[T]]
 }
 
 // GetNext returns the next object in the pool's linked list
 func (p *PoolObject[T]) GetNext() *PoolObject[T] {
 	if next := p.next.Load(); next != nil {
-		return next.(*PoolObject[T])
+		return next
 	}
 	return nil
 }
@@ -114,10 +107,10 @@ func DefaultConfig[T any](allocator Allocator[T], cleaner Cleaner[T]) PoolConfig
 // PoolShard represents a single shard in the pool
 type PoolShard[T any] struct {
 	// head is the head of the linked list for this shard
-	head atomic.Value // *PoolObject[T]
+	head atomic.Pointer[PoolObject[T]]
 
 	// pad ensures each shard is on its own cache line
-	_ [64 - unsafe.Sizeof(atomic.Value{})%64]byte
+	_ [64 - unsafe.Sizeof(atomic.Pointer[PoolObject[T]]{})%64]byte
 }
 
 // ShardedPool is the main pool implementation using sharding for better concurrency
@@ -137,14 +130,7 @@ type ShardedPool[T any] struct {
 
 // NewPool creates a new sharded pool with the given configuration
 func NewPool[T any](allocator Allocator[T], cleaner Cleaner[T]) (*ShardedPool[T], error) {
-	var zero T
-	t := reflect.TypeOf(zero)
-	if t.Kind() != reflect.Ptr {
-		return nil, fmt.Errorf("%w, got %T", ErrNonPointerType, zero)
-	}
-
-	cfg := DefaultConfig(allocator, cleaner)
-	return NewPoolWithConfig(cfg)
+	return NewPoolWithConfig(DefaultConfig(allocator, cleaner))
 }
 
 // NewPoolWithConfig creates a new sharded pool with the specified configuration
@@ -191,7 +177,7 @@ func (p *ShardedPool[T]) getShard() *PoolShard[T] {
 }
 
 // RetrieveOrCreate gets an object from the pool or creates a new one
-func (p *ShardedPool[T]) RetrieveOrCreate() T {
+func (p *ShardedPool[T]) RetrieveOrCreate() *T {
 	shard := p.getShard()
 
 	// Try to get an object from the shard
@@ -205,7 +191,7 @@ func (p *ShardedPool[T]) RetrieveOrCreate() T {
 }
 
 // Put returns an object to the pool
-func (p *ShardedPool[T]) Put(obj T) {
+func (p *ShardedPool[T]) Put(obj *T) {
 	p.cfg.Cleaner(obj)
 
 	// Wrap the object in a PoolObject
@@ -216,7 +202,7 @@ func (p *ShardedPool[T]) Put(obj T) {
 	shard := p.getShard()
 
 	for {
-		oldHead := shard.head.Load().(*PoolObject[T])
+		oldHead := shard.head.Load()
 		poolObj.SetNext(oldHead)
 
 		if shard.head.CompareAndSwap(oldHead, poolObj) {
@@ -228,7 +214,7 @@ func (p *ShardedPool[T]) Put(obj T) {
 // retrieveFromShard gets an object from a specific shard
 func (p *ShardedPool[T]) retrieveFromShard(shard *PoolShard[T]) *PoolObject[T] {
 	for {
-		oldHead := shard.head.Load().(*PoolObject[T])
+		oldHead := shard.head.Load()
 
 		if oldHead == nil {
 			return nil
@@ -245,7 +231,7 @@ func (p *ShardedPool[T]) retrieveFromShard(shard *PoolShard[T]) *PoolObject[T] {
 func (p *ShardedPool[T]) clear() {
 	for _, shard := range p.shards {
 		for {
-			current := shard.head.Load().(*PoolObject[T])
+			current := shard.head.Load()
 			if current == nil {
 				break
 			}
@@ -298,7 +284,7 @@ func (p *ShardedPool[T]) cleanup() {
 
 func (p *ShardedPool[T]) cleanupShard(shard *PoolShard[T]) {
 	// Atomically take the entire list from the shard.
-	oldHead := shard.head.Load().(*PoolObject[T])
+	oldHead := shard.head.Load()
 	if oldHead == nil {
 		return
 	}
@@ -339,7 +325,7 @@ func (p *ShardedPool[T]) cleanupShard(shard *PoolShard[T]) {
 	if keptHead != nil {
 		// Atomically prepend the list of kept items to the shard's current list.
 		for {
-			currentHead := shard.head.Load().(*PoolObject[T])
+			currentHead := shard.head.Load()
 			keptTail.SetNext(currentHead)
 
 			if shard.head.CompareAndSwap(currentHead, keptHead) {

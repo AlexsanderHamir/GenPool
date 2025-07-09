@@ -1,7 +1,6 @@
 package pool
 
 import (
-	"errors"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -11,19 +10,19 @@ import (
 type TestObject struct {
 	ID         int
 	Value      string
-	next       atomic.Value // Stores Poolable
+	next       atomic.Pointer[TestObject]
 	usageCount atomic.Int64
 	inUse      atomic.Bool // Track if object is in use
 }
 
-func (o *TestObject) GetNext() Poolable {
+func (o *TestObject) GetNext() *TestObject {
 	if next := o.next.Load(); next != nil {
-		return next.(Poolable)
+		return next
 	}
 	return nil
 }
 
-func (o *TestObject) SetNext(next Poolable) {
+func (o *TestObject) SetNext(next *TestObject) {
 	o.next.Store(next)
 }
 
@@ -47,41 +46,6 @@ func (o *TestObject) SetInUse(inUse bool) bool {
 	return o.inUse.CompareAndSwap(!inUse, inUse)
 }
 
-// NonPointerObject is used to test the pointer type constraint
-type NonPointerObject struct {
-	ID         int
-	Value      string
-	Next       atomic.Value
-	usageCount atomic.Int64
-	inUse      atomic.Bool
-}
-
-func (o NonPointerObject) GetNext() Poolable {
-	return nil
-}
-
-func (o NonPointerObject) SetNext(next Poolable) {}
-
-func (o NonPointerObject) GetUsageCount() int64 {
-	return o.usageCount.Load()
-}
-
-func (o NonPointerObject) IncrementUsage() {
-	o.usageCount.Add(1)
-}
-
-func (o NonPointerObject) ResetUsage() {
-	o.usageCount.Store(0)
-}
-
-func (o NonPointerObject) IsInUse() bool {
-	return o.inUse.Load()
-}
-
-func (o NonPointerObject) SetInUse(inUse bool) bool {
-	return o.inUse.CompareAndSwap(!inUse, inUse)
-}
-
 // testAllocator creates a new TestObject for the pool
 func testAllocator() *TestObject {
 	return &TestObject{ID: 1, Value: "test"}
@@ -101,16 +65,6 @@ func TestNewPool(t *testing.T) {
 		}
 		if pool == nil {
 			t.Error("NewPool() returned nil pool")
-		}
-	})
-
-	t.Run("non-pointer type", func(t *testing.T) {
-		_, err := NewPool(
-			func() NonPointerObject { return NonPointerObject{} },
-			func(obj NonPointerObject) {},
-		)
-		if !errors.Is(err, ErrNonPointerType) {
-			t.Errorf("NewPool() error = %v, want %v", err, ErrNonPointerType)
 		}
 	})
 }
