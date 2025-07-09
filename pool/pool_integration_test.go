@@ -1,4 +1,4 @@
-package pool
+package pool_test
 
 import (
 	"context"
@@ -7,9 +7,11 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/AlexsanderHamir/GenPool/pool"
 )
 
-// TestObjectWithResources is a more complex test object that simulates real-world usage
+// TestObjectWithResources is a more complex test object that simulates real-world usage.
 type TestObjectWithResources struct {
 	// Real-world fields
 	ID         int
@@ -66,13 +68,15 @@ func cleanTestObjectWithResources(obj *TestObjectWithResources) {
 	obj.IsValid = false
 }
 
-// TestPoolStress tests the pool under heavy concurrent load
+// TestPoolStress tests the pool under heavy concurrent load.
 func TestPoolStress(t *testing.T) {
-	cfg := DefaultConfig(newTestObjectWithResources, cleanTestObjectWithResources)
-	pool, err := NewPoolWithConfig(cfg)
+	cfg := pool.DefaultConfig(newTestObjectWithResources, cleanTestObjectWithResources)
+	p, err := pool.NewPoolWithConfig(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	defer p.Close()
 
 	const (
 		goroutines = 1000
@@ -107,7 +111,7 @@ func TestPoolStress(t *testing.T) {
 				case <-ctx.Done():
 					return
 				default:
-					obj := pool.RetrieveOrCreate()
+					obj := p.RetrieveOrCreate()
 					if obj == nil {
 						errorsMu.Lock()
 						errors = append(errors, fmt.Errorf("goroutine %d: RetrieveOrCreate returned nil", id))
@@ -117,7 +121,7 @@ func TestPoolStress(t *testing.T) {
 
 					time.Sleep(time.Millisecond)
 
-					pool.Put(obj)
+					p.Put(obj)
 				}
 			}
 		}(i)
@@ -133,20 +137,22 @@ func TestPoolStress(t *testing.T) {
 	}
 }
 
-// TestPoolObjectLifecycle verifies proper object lifecycle management
+// TestPoolObjectLifecycle verifies proper object lifecycle management.
 func TestPoolObjectLifecycle(t *testing.T) {
-	cfg := DefaultConfig(newTestObjectWithResources, cleanTestObjectWithResources)
+	cfg := pool.DefaultConfig(newTestObjectWithResources, cleanTestObjectWithResources)
 	cfg.Cleanup.Enabled = true
 	cfg.Cleanup.Interval = 100 * time.Millisecond
 	cfg.Cleanup.MinUsageCount = 2
 
-	pool, err := NewPoolWithConfig(cfg)
+	p, err := pool.NewPoolWithConfig(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	defer p.Close()
+
 	// Test object creation and initial state
-	obj := pool.RetrieveOrCreate()
+	obj := p.RetrieveOrCreate()
 	if !obj.IsValid {
 		t.Error("New object should be valid")
 	}
@@ -156,9 +162,9 @@ func TestPoolObjectLifecycle(t *testing.T) {
 	}
 
 	// Test object reuse
-	pool.Put(obj)
+	p.Put(obj)
 
-	obj2 := pool.RetrieveOrCreate()
+	obj2 := p.RetrieveOrCreate()
 	if obj2 != obj {
 		t.Error("Expected to get the same object back")
 	}
@@ -166,19 +172,18 @@ func TestPoolObjectLifecycle(t *testing.T) {
 	if obj2.GetUsageCount() != 2 {
 		t.Errorf("Expected usage count 2, got %d", obj2.GetUsageCount())
 	}
-
 }
 
-// TestPoolConfigurationValidation verifies configuration validation
+// TestPoolConfigurationValidation verifies configuration validation.
 func TestPoolConfigurationValidation(t *testing.T) {
 	tests := []struct {
 		name    string
-		config  PoolConfig[TestObjectWithResources, *TestObjectWithResources]
+		config  pool.PoolConfig[TestObjectWithResources, *TestObjectWithResources]
 		wantErr bool
 	}{
 		{
 			name: "valid config",
-			config: PoolConfig[TestObjectWithResources, *TestObjectWithResources]{
+			config: pool.PoolConfig[TestObjectWithResources, *TestObjectWithResources]{
 				Allocator: newTestObjectWithResources,
 				Cleaner:   cleanTestObjectWithResources,
 			},
@@ -186,7 +191,7 @@ func TestPoolConfigurationValidation(t *testing.T) {
 		},
 		{
 			name: "nil allocator",
-			config: PoolConfig[TestObjectWithResources, *TestObjectWithResources]{
+			config: pool.PoolConfig[TestObjectWithResources, *TestObjectWithResources]{
 				Allocator: nil,
 				Cleaner:   cleanTestObjectWithResources,
 			},
@@ -194,7 +199,7 @@ func TestPoolConfigurationValidation(t *testing.T) {
 		},
 		{
 			name: "nil cleaner",
-			config: PoolConfig[TestObjectWithResources, *TestObjectWithResources]{
+			config: pool.PoolConfig[TestObjectWithResources, *TestObjectWithResources]{
 				Allocator: newTestObjectWithResources,
 				Cleaner:   nil,
 			},
@@ -202,10 +207,10 @@ func TestPoolConfigurationValidation(t *testing.T) {
 		},
 		{
 			name: "invalid cleanup interval",
-			config: PoolConfig[TestObjectWithResources, *TestObjectWithResources]{
+			config: pool.PoolConfig[TestObjectWithResources, *TestObjectWithResources]{
 				Allocator: newTestObjectWithResources,
 				Cleaner:   cleanTestObjectWithResources,
-				Cleanup: CleanupPolicy{
+				Cleanup: pool.CleanupPolicy{
 					Enabled:  true,
 					Interval: -1 * time.Second,
 				},
@@ -216,7 +221,11 @@ func TestPoolConfigurationValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewPoolWithConfig(tt.config)
+			p, err := pool.NewPoolWithConfig(tt.config)
+			if p != nil {
+				defer p.Close()
+			}
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewPoolWithConfig() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -224,26 +233,28 @@ func TestPoolConfigurationValidation(t *testing.T) {
 	}
 }
 
-// TestPoolObjectReuse verifies that objects are properly reused and cleaned
+// TestPoolObjectReuse verifies that objects are properly reused and cleaned.
 func TestPoolObjectReuse(t *testing.T) {
-	cfg := DefaultConfig(newTestObjectWithResources, cleanTestObjectWithResources)
+	cfg := pool.DefaultConfig(newTestObjectWithResources, cleanTestObjectWithResources)
 	cfg.Cleanup.Enabled = true
 	cfg.Cleanup.Interval = 100 * time.Millisecond
 	cfg.Cleanup.MinUsageCount = 1
 
-	pool, err := NewPoolWithConfig(cfg)
+	p, err := pool.NewPoolWithConfig(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	defer p.Close()
 
 	// Create and track objects
 	objects := make(map[*TestObjectWithResources]int)
 	const iterations = 100
 
 	for range iterations {
-		obj := pool.RetrieveOrCreate()
+		obj := p.RetrieveOrCreate()
 		objects[obj]++
-		pool.Put(obj)
+		p.Put(obj)
 	}
 
 	// Verify object reuse

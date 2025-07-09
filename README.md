@@ -153,6 +153,7 @@ func main() {
 		panic(err)
 	}
 
+	defer benchPool.Close()
 
 	obj := benchPool.RetrieveOrCreate()
 
