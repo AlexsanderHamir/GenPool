@@ -7,22 +7,16 @@ This two-pass approach ensures that objects which were heavily used in the past 
 By resetting the usage count only for retained objects, the system gives every object a fair chance to prove recent utility before eviction—encouraging temporal locality and keeping the pool fresh.
 
 ````go
-
-    func (p *ShardedPool[T]) cleanupShard(shard *PoolShard[T]) {
+func (p *ShardedPool[T, P]) cleanupShard(shard *PoolShard[T, P]) {
 	var current, prev T
 	var kept int
-	var zero T
 
-	current, ok := shard.head.Load().(T)
-	if !ok {
+	current := shard.head.Load()
+	if current == nil {
 		return
 	}
 
-	if reflect.ValueOf(current).IsNil() {
-		return
-	}
-
-	for !reflect.ValueOf(current).IsNil() {
+	for current != nil {
 		next := current.GetNext()
 		usageCount := current.GetUsageCount()
 
@@ -42,9 +36,9 @@ By resetting the usage count only for retained objects, the system gives every o
 			prev = current
 			kept++
 		} else {
-			if reflect.ValueOf(prev).IsNil() {
-				if reflect.ValueOf(next).IsNil() {
-					shard.head.Store(zero)
+			if prev == nil {
+				if next == nil {
+					shard.head.Store(nil)
 				} else {
 					shard.head.Store(next)
 				}
@@ -52,11 +46,11 @@ By resetting the usage count only for retained objects, the system gives every o
 				prev.SetNext(next)
 			}
 
-			current.SetNext(zero)
+			current.SetNext(nil)
 			p.cfg.Cleaner(current)
 		}
 
-		current = next.(T)
+		current = next
 	}
 }
 

@@ -20,18 +20,18 @@ type TestObjectWithResources struct {
 	LastUsedAt time.Time
 
 	// Poolable fields
-	next       atomic.Value
+	next       atomic.Pointer[TestObjectWithResources]
 	usageCount atomic.Int64
 }
 
-func (o *TestObjectWithResources) GetNext() Poolable {
+func (o *TestObjectWithResources) GetNext() *TestObjectWithResources {
 	if next := o.next.Load(); next != nil {
-		return next.(Poolable)
+		return next
 	}
 	return nil
 }
 
-func (o *TestObjectWithResources) SetNext(next Poolable) {
+func (o *TestObjectWithResources) SetNext(next *TestObjectWithResources) {
 	o.next.Store(next)
 }
 
@@ -76,7 +76,6 @@ func TestPoolStress(t *testing.T) {
 
 	const (
 		goroutines = 1000
-		iterations = 1000
 		duration   = 5 * time.Second
 	)
 
@@ -174,12 +173,12 @@ func TestPoolObjectLifecycle(t *testing.T) {
 func TestPoolConfigurationValidation(t *testing.T) {
 	tests := []struct {
 		name    string
-		config  PoolConfig[*TestObjectWithResources]
+		config  PoolConfig[TestObjectWithResources, *TestObjectWithResources]
 		wantErr bool
 	}{
 		{
 			name: "valid config",
-			config: PoolConfig[*TestObjectWithResources]{
+			config: PoolConfig[TestObjectWithResources, *TestObjectWithResources]{
 				Allocator: newTestObjectWithResources,
 				Cleaner:   cleanTestObjectWithResources,
 			},
@@ -187,7 +186,7 @@ func TestPoolConfigurationValidation(t *testing.T) {
 		},
 		{
 			name: "nil allocator",
-			config: PoolConfig[*TestObjectWithResources]{
+			config: PoolConfig[TestObjectWithResources, *TestObjectWithResources]{
 				Allocator: nil,
 				Cleaner:   cleanTestObjectWithResources,
 			},
@@ -195,7 +194,7 @@ func TestPoolConfigurationValidation(t *testing.T) {
 		},
 		{
 			name: "nil cleaner",
-			config: PoolConfig[*TestObjectWithResources]{
+			config: PoolConfig[TestObjectWithResources, *TestObjectWithResources]{
 				Allocator: newTestObjectWithResources,
 				Cleaner:   nil,
 			},
@@ -203,7 +202,7 @@ func TestPoolConfigurationValidation(t *testing.T) {
 		},
 		{
 			name: "invalid cleanup interval",
-			config: PoolConfig[*TestObjectWithResources]{
+			config: PoolConfig[TestObjectWithResources, *TestObjectWithResources]{
 				Allocator: newTestObjectWithResources,
 				Cleaner:   cleanTestObjectWithResources,
 				Cleanup: CleanupPolicy{
