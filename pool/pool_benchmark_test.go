@@ -2,7 +2,6 @@ package pool
 
 import (
 	"math/rand"
-	"runtime"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -70,7 +69,6 @@ func cleaner(obj *BenchmarkObject) {
 }
 
 func BenchmarkGenPool(b *testing.B) {
-	runtime.SetBlockProfileRate(1)
 	cfg := PoolConfig[BenchmarkObject, *BenchmarkObject]{
 		Allocator: allocator,
 		Cleaner:   cleaner,
@@ -87,10 +85,6 @@ func BenchmarkGenPool(b *testing.B) {
 		for pb.Next() {
 			obj := pool.RetrieveOrCreate()
 
-			if obj == nil {
-				b.Fatal("obj is nil")
-			}
-
 			performWorkload(obj)
 
 			pool.Put(obj)
@@ -98,7 +92,6 @@ func BenchmarkGenPool(b *testing.B) {
 	})
 }
 func BenchmarkSyncPool(b *testing.B) {
-	runtime.SetBlockProfileRate(1)
 	pool := &sync.Pool{
 		New: func() any {
 			return allocator()
@@ -110,10 +103,6 @@ func BenchmarkSyncPool(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			obj := pool.Get().(*BenchmarkObject)
-
-			if obj == nil {
-				b.Fatal("obj is nil")
-			}
 
 			performWorkload(obj)
 

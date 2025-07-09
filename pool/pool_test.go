@@ -8,8 +8,9 @@ import (
 
 // TestObject is a simple struct we'll use for testing
 type TestObject struct {
-	ID         int
-	Value      string
+	ID    int
+	Value string
+
 	next       atomic.Pointer[TestObject]
 	usageCount atomic.Int64
 	inUse      atomic.Bool // Track if object is in use
@@ -114,5 +115,6 @@ func TestPoolCleanupUsageCount(t *testing.T) {
 		if obj1.GetUsageCount() != 0 {
 			t.Errorf("obj1 should have been cleaned up (usage count 0), got %d", obj1.GetUsageCount())
 		}
+
 	})
 }

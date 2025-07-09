@@ -10,6 +10,6 @@ example/ export-ignore
 *.md export-ignore
 LICENSE export-ignore
 
-pool/pool_benchmark_test.go export-ignore
-pool/pool_integration_test.go export-ignore
-pool/pool_test.go export-ignore
+pool/*_test.go export-ignore
+pool/alternative/* -text
+
