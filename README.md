@@ -1,6 +1,6 @@
 # GenPool
 
-GenPool delivers sync.Pool-level performance with the added benefit of configurable object reclamation, letting you fine-tune reuse and lifecycle management.
+GenPool delivers better performance than sync.Pool in high or unpredictable latency scenarios, while giving you control over when and how aggressively memory is reclaimed.
 
 [![GoDoc](https://godoc.org/github.com/AlexsanderHamir/GenPool?status.svg)](https://godoc.org/github.com/AlexsanderHamir/GenPool)
 ![Build](https://github.com/AlexsanderHamir/GenPool/actions/workflows/test.yml/badge.svg)
