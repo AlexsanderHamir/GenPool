@@ -2,7 +2,6 @@ package main
 
 import (
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -10,33 +9,10 @@ import (
 )
 
 type Object struct {
-	Name       string
-	Data       []byte
-	usageCount atomic.Int64
-	next       atomic.Pointer[Object]
-}
+	Name string
+	Data []byte
 
-func (o *Object) GetNext() *Object {
-	if next := o.next.Load(); next != nil {
-		return next
-	}
-	return nil
-}
-
-func (o *Object) SetNext(next *Object) {
-	o.next.Store(next)
-}
-
-func (o *Object) GetUsageCount() int64 {
-	return o.usageCount.Load()
-}
-
-func (o *Object) IncrementUsage() {
-	o.usageCount.Add(1)
-}
-
-func (o *Object) ResetUsage() {
-	o.usageCount.Store(0)
+	pool.PoolFields[Object]
 }
 
 func allocator() *Object {

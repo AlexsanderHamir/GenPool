@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -21,34 +20,7 @@ type TestObjectWithResources struct {
 	CreatedAt  time.Time
 	LastUsedAt time.Time
 
-	// Poolable fields
-	next       atomic.Pointer[TestObjectWithResources]
-	usageCount atomic.Int64
-}
-
-func (o *TestObjectWithResources) GetNext() *TestObjectWithResources {
-	if next := o.next.Load(); next != nil {
-		return next
-	}
-	return nil
-}
-
-func (o *TestObjectWithResources) SetNext(next *TestObjectWithResources) {
-	o.next.Store(next)
-}
-
-func (o *TestObjectWithResources) GetUsageCount() int64 {
-	return o.usageCount.Load()
-}
-
-func (o *TestObjectWithResources) IncrementUsage() {
-	o.usageCount.Add(1)
-	o.LastUsedAt = time.Now()
-}
-
-func (o *TestObjectWithResources) ResetUsage() {
-	o.usageCount.Store(0)
-	o.LastUsedAt = time.Time{}
+	pool.PoolFields[TestObjectWithResources]
 }
 
 func newTestObjectWithResources() *TestObjectWithResources {

@@ -3,7 +3,6 @@ package pool_test
 import (
 	"math/rand/v2"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -18,10 +17,7 @@ type BenchmarkObject struct {
 	Data []byte   // 24 bytes
 	_    [24]byte // 24 bytes = 64 bytes
 
-	// interface necessary fields (kept together since they're modified together)
-	usageCount atomic.Int64                    // 8 bytes
-	next       atomic.Pointer[BenchmarkObject] // 8 bytes
-	_          [48]byte                        // 48 bytes padding to make struct 128 bytes (2 cache lines)
+	pool.PoolFields[BenchmarkObject]
 }
 
 func highLatencyWorkload(obj *BenchmarkObject) {
@@ -58,29 +54,6 @@ func lowLatencyWorkload(obj *BenchmarkObject) {
 
 	// Simulate minimal delay
 	time.Sleep(5 * time.Microsecond)
-}
-
-func (o *BenchmarkObject) GetNext() *BenchmarkObject {
-	if next := o.next.Load(); next != nil {
-		return next
-	}
-	return nil
-}
-
-func (o *BenchmarkObject) SetNext(next *BenchmarkObject) {
-	o.next.Store(next)
-}
-
-func (o *BenchmarkObject) GetUsageCount() int64 {
-	return o.usageCount.Load()
-}
-
-func (o *BenchmarkObject) IncrementUsage() {
-	o.usageCount.Add(1)
-}
-
-func (o *BenchmarkObject) ResetUsage() {
-	o.usageCount.Store(0)
 }
 
 // Helper functions for benchmarks.

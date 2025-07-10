@@ -379,3 +379,30 @@ func runtime_procPin() int
 
 //go:linkname runtime_procUnpin runtime.procUnpin
 func runtime_procUnpin()
+
+// PoolFields provides intrusive fields and logic for a poolable object.
+// This struct can be embedded in user types.
+type PoolFields[T any] struct {
+	usageCount atomic.Int64
+	next       atomic.Pointer[T]
+}
+
+func (p *PoolFields[T]) GetNext() *T {
+	return p.next.Load()
+}
+
+func (p *PoolFields[T]) SetNext(n *T) {
+	p.next.Store(n)
+}
+
+func (p *PoolFields[T]) GetUsageCount() int64 {
+	return p.usageCount.Load()
+}
+
+func (p *PoolFields[T]) IncrementUsage() {
+	p.usageCount.Add(1)
+}
+
+func (p *PoolFields[T]) ResetUsage() {
+	p.usageCount.Store(0)
+}

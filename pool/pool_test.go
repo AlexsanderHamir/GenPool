@@ -1,7 +1,6 @@
 package pool_test
 
 import (
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -13,31 +12,7 @@ type TestObject struct {
 	ID    int
 	Value string
 
-	next       atomic.Pointer[TestObject]
-	usageCount atomic.Int64
-}
-
-func (o *TestObject) GetNext() *TestObject {
-	if next := o.next.Load(); next != nil {
-		return next
-	}
-	return nil
-}
-
-func (o *TestObject) SetNext(next *TestObject) {
-	o.next.Store(next)
-}
-
-func (o *TestObject) GetUsageCount() int64 {
-	return o.usageCount.Load()
-}
-
-func (o *TestObject) IncrementUsage() {
-	o.usageCount.Add(1)
-}
-
-func (o *TestObject) ResetUsage() {
-	o.usageCount.Store(0)
+	pool.PoolFields[TestObject]
 }
 
 // testAllocator creates a new TestObject for the pool.

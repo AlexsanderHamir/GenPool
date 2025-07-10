@@ -88,31 +88,7 @@ import (
 type Object struct {
 	Name       string
 	Data       []byte
-	usageCount atomic.Int64
-	next       atomic.Pointer[Object]
-}
-
-func (o *Object) GetNext() *Object {
-	if next := o.next.Load(); next != nil {
-		return next
-	}
-	return nil
-}
-
-func (o *Object) SetNext(next *Object) {
-	o.next.Store(next)
-}
-
-func (o *Object) GetUsageCount() int64 {
-	return o.usageCount.Load()
-}
-
-func (o *Object) IncrementUsage() {
-	o.usageCount.Add(1)
-}
-
-func (o *Object) ResetUsage() {
-	o.usageCount.Store(0)
+	pool.PoolFields[BenchmarkObject]
 }
 
 func allocator() *Object {
