@@ -21,7 +21,7 @@ type BenchmarkObject struct {
 	// interface necessary fields (kept together since they're modified together)
 	usageCount atomic.Int64                    // 8 bytes
 	next       atomic.Pointer[BenchmarkObject] // 8 bytes
-	_          [40]byte                        // 40 bytes padding to make struct 128 bytes (2 cache lines)
+	_          [48]byte                        // 48 bytes padding to make struct 128 bytes (2 cache lines)
 }
 
 func highLatencyWorkload(obj *BenchmarkObject) {

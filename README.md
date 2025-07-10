@@ -54,7 +54,7 @@ GenPool delivers better performance than sync.Pool in high or unpredictable late
 
 ### ⚙️ Performance Tip
 
-For best results under contention, place fields like `usageCount` and `next` on separate cache lines (add padding if needed). This avoids false sharing and improves cache performance across cores.
+For best results under contention, place fields like `usageCount` and `next` on separate cache lines (add padding if needed). This avoids false sharing and improves cache performance across cores. ([example](pool/pool_benchmark_test.go))
 
 ## References
 

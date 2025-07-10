@@ -217,6 +217,19 @@ func TestPoolConfigurationValidation(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "invalid MinUsageCount",
+			config: pool.PoolConfig[TestObjectWithResources, *TestObjectWithResources]{
+				Allocator: newTestObjectWithResources,
+				Cleaner:   cleanTestObjectWithResources,
+				Cleanup: pool.CleanupPolicy{
+					Enabled:       true,
+					Interval:      1 * time.Second,
+					MinUsageCount: -1,
+				},
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
