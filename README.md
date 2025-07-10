@@ -24,41 +24,37 @@ GenPool delivers sync.Pool-level performance with the added benefit of configura
 
 ## Performance
 
-Choose GenPool when you need finer control over object lifecycle, especially in scenarios where predictable reclamation and reuse patterns are critical.
+### Environment
 
-### Benchmark Comparison
+- **GOOS:** darwin
+- **GOARCH:** arm64
+- **CPU:** Apple M1
+- **Package:** `github.com/AlexsanderHamir/GenPool/pool`
 
-#### GenPool
+### Benchmark Results
 
-|  Metric |  ns/op | Bytes/op | Allocs/op |
-| ------: | -----: | -------: | --------: |
-| Average | 1539.8 |      3.2 |         0 |
-|     Min |   1535 |        2 |         0 |
-|     Max |   1572 |        5 |         0 |
-|     p50 |   1538 |        — |         — |
-|     p95 |   1554 |        — |         — |
-|     p99 |   1572 |        — |         — |
+| Latency Level | Metric         | GenPool   | SyncPool  | Delta Value | Delta % |
+| ------------- | -------------- | --------- | --------- | ----------- | ------- |
+| **High**      | Avg Iterations | 91,050    | 85,217    | -5,833      | -6.41%  |
+|               | Avg Time (ns)  | 12,278    | 12,778    | +500        | +4.07%  |
 
-#### sync.Pool
 
-|  Metric |  ns/op | Bytes/op | Allocs/op |
-| ------: | -----: | -------: | --------: |
-| Average | 1528.1 |      3.3 |         0 |
-|     Min |   1524 |        2 |         0 |
-|     Max |   1559 |        5 |         0 |
-|     p50 |   1527 |        — |         — |
-|     p95 |   1546 |        — |         — |
-|     p99 |   1559 |        — |         — |
+| **Moderate**  | Avg Iterations | 865,793   | 864,402   | -1,391      | -0.16%  |
+|               | Avg Time (ns)  | 1,245.3   | 1,249.9   | +4.6        | +0.37%  |
 
-> **Detailed results available at:** [GenPool vs sync.Pool](./benchmark_results_transparency)
+
+| **Low**       | Avg Iterations | 6,230,961 | 6,326,247 | +95,286     | +1.53%  |
+|               | Avg Time (ns)  | 190.13    | 186.88    | -3.25       | -1.71%  |
+
+> **Full benchmark details:** [GenPool vs sync.Pool](./benchmark_results_transparency)
 
 ### Summary
 
-- GenPool performs similarly to `sync.Pool` in most cases.
-- Under high concurrency / high latency, it offers slightly better performance:
-  - ~20ns faster per operation
-  - ~1–2 bytes less memory used
-  - Lower contention and smoother latency
+- **GenPool and `sync.Pool` deliver comparable performance across most workloads.**
+- Under **high latency/high concurrency scenarios**, GenPool provides:
+
+  - Approximately **400/600 ns faster** per operation
+  - Around **1.5/2 bytes less memory allocation**
 
 ### ⚙️ Performance Tip
 
