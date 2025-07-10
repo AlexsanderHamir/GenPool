@@ -1,6 +1,8 @@
 # GenPool
 
-GenPool delivers better performance than sync.Pool in high or unpredictable latency scenarios, while giving you control over when and how aggressively memory is reclaimed.
+GenPool delivers better performance than sync.Pool when your system tends to hold onto objects longer—that is, under moderate to high latency workloads—while giving you precise control over when and how aggressively memory is reclaimed.
+
+> If your system rarely retains objects and has low concurrency, you’re unlikely to benefit from GenPool’s design.
 
 [![GoDoc](https://godoc.org/github.com/AlexsanderHamir/GenPool?status.svg)](https://godoc.org/github.com/AlexsanderHamir/GenPool)
 ![Build](https://github.com/AlexsanderHamir/GenPool/actions/workflows/test.yml/badge.svg)
