@@ -13,7 +13,6 @@ type TestObject struct {
 
 	next       atomic.Pointer[TestObject]
 	usageCount atomic.Int64
-	inUse      atomic.Bool // Track if object is in use
 }
 
 func (o *TestObject) GetNext() *TestObject {
@@ -37,14 +36,6 @@ func (o *TestObject) IncrementUsage() {
 
 func (o *TestObject) ResetUsage() {
 	o.usageCount.Store(0)
-}
-
-func (o *TestObject) IsInUse() bool {
-	return o.inUse.Load()
-}
-
-func (o *TestObject) SetInUse(inUse bool) bool {
-	return o.inUse.CompareAndSwap(!inUse, inUse)
 }
 
 // testAllocator creates a new TestObject for the pool
