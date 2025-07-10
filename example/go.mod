@@ -2,4 +2,4 @@ module example
 
 go 1.24.3
 
-require github.com/AlexsanderHamir/GenPool v1.4.1
+require github.com/AlexsanderHamir/GenPool v1.5.0
