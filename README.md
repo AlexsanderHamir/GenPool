@@ -37,12 +37,8 @@ GenPool delivers sync.Pool-level performance with the added benefit of configura
 | ------------- | -------------- | --------- | --------- | ----------- | ------- |
 | **High**      | Avg Iterations | 91,050    | 85,217    | -5,833      | -6.41%  |
 |               | Avg Time (ns)  | 12,278    | 12,778    | +500        | +4.07%  |
-
-
 | **Moderate**  | Avg Iterations | 865,793   | 864,402   | -1,391      | -0.16%  |
 |               | Avg Time (ns)  | 1,245.3   | 1,249.9   | +4.6        | +0.37%  |
-
-
 | **Low**       | Avg Iterations | 6,230,961 | 6,326,247 | +95,286     | +1.53%  |
 |               | Avg Time (ns)  | 190.13    | 186.88    | -3.25       | -1.71%  |
 
