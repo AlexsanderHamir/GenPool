@@ -1,12 +1,14 @@
-package pool
+package pool_test
 
 import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/AlexsanderHamir/GenPool/pool"
 )
 
-// TestObject is a simple struct we'll use for testing
+// TestObject is a simple struct we'll use for testing.
 type TestObject struct {
 	ID    int
 	Value string
@@ -47,12 +49,12 @@ func (o *TestObject) SetInUse(inUse bool) bool {
 	return o.inUse.CompareAndSwap(!inUse, inUse)
 }
 
-// testAllocator creates a new TestObject for the pool
+// testAllocator creates a new TestObject for the pool.
 func testAllocator() *TestObject {
 	return &TestObject{ID: 1, Value: "test"}
 }
 
-// testCleaner resets a TestObject
+// testCleaner resets a TestObject.
 func testCleaner(obj *TestObject) {
 	obj.ID = 0
 	obj.Value = ""
@@ -60,11 +62,15 @@ func testCleaner(obj *TestObject) {
 
 func TestNewPool(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		pool, err := NewPool(testAllocator, testCleaner)
+		p, err := pool.NewPool(testAllocator, testCleaner)
+		if p != nil {
+			defer p.Close()
+		}
+
 		if err != nil {
 			t.Errorf("NewPool() error = %v, want nil", err)
 		}
-		if pool == nil {
+		if p == nil {
 			t.Error("NewPool() returned nil pool")
 		}
 	})
@@ -72,12 +78,14 @@ func TestNewPool(t *testing.T) {
 
 func TestPoolRetrieveOrCreate(t *testing.T) {
 	t.Run("with allocator", func(t *testing.T) {
-		pool, err := NewPool(testAllocator, testCleaner)
+		p, err := pool.NewPool(testAllocator, testCleaner)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		obj := pool.RetrieveOrCreate()
+		defer p.Close()
+
+		obj := p.RetrieveOrCreate()
 		if obj == nil {
 			t.Error("RetrieveOrCreate() returned nil object")
 			return
@@ -91,16 +99,18 @@ func TestPoolRetrieveOrCreate(t *testing.T) {
 
 func TestPoolCleanupUsageCount(t *testing.T) {
 	t.Run("should cleanup low usage objects", func(t *testing.T) {
-		cfg := DefaultConfig(testAllocator, testCleaner)
+		cfg := pool.DefaultConfig(testAllocator, testCleaner)
 		cfg.Cleanup.Enabled = true
 		cfg.Cleanup.Interval = 100 * time.Millisecond
 
-		pool, err := NewPoolWithConfig(cfg)
+		p, err := pool.NewPoolWithConfig(cfg)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		obj1 := pool.RetrieveOrCreate()
+		defer p.Close()
+
+		obj1 := p.RetrieveOrCreate()
 		if obj1 == nil {
 			t.Fatal("RetrieveOrCreate() returned nil object")
 		}
@@ -108,13 +118,12 @@ func TestPoolCleanupUsageCount(t *testing.T) {
 		obj1.IncrementUsage()
 		obj1.IncrementUsage()
 
-		pool.Put(obj1)
+		p.Put(obj1)
 
 		time.Sleep(1 * time.Second)
 
 		if obj1.GetUsageCount() != 0 {
 			t.Errorf("obj1 should have been cleaned up (usage count 0), got %d", obj1.GetUsageCount())
 		}
-
 	})
 }

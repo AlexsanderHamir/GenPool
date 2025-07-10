@@ -12,20 +12,20 @@ import (
 	"unsafe"
 )
 
-// Common errors that may be returned by the pool
+// Common errors that may be returned by the pool.
 var (
-	// ErrNoAllocator is returned when attempting to get an object but no allocator is configured
-	ErrNoAllocator = fmt.Errorf("no allocator configured")
+	// ErrNoAllocator is returned when attempting to get an object but no allocator is configured.
+	ErrNoAllocator = errors.New("no allocator configured")
 
-	// ErrNoCleaner is returned when attempting to create a pool but no cleaner is configured
-	ErrNoCleaner = fmt.Errorf("no cleaner configured")
+	// ErrNoCleaner is returned when attempting to create a pool but no cleaner is configured.
+	ErrNoCleaner = errors.New("no cleaner configured")
 )
 
-var (
-	numShards = runtime.GOMAXPROCS(0)
-)
+// numShards attempts to get the approximate number of shards that is fitting for your CPU.
+// It will not work well if you start with 2 logical cores and gradually move to 64.
+var numShards = min(max(runtime.GOMAXPROCS(0), 8), 128)
 
-// CleanupPolicy defines how the pool should clean up unused objects
+// CleanupPolicy defines how the pool should clean up unused objects.
 type CleanupPolicy struct {
 	// Enabled determines if automatic cleanup is enabled
 	Enabled bool
@@ -35,7 +35,7 @@ type CleanupPolicy struct {
 	MinUsageCount int64
 }
 
-// DefaultCleanupPolicy returns a default cleanup configuration
+// DefaultCleanupPolicy returns a default cleanup configuration.
 func DefaultCleanupPolicy() CleanupPolicy {
 	return CleanupPolicy{
 		Enabled:       false,
@@ -44,20 +44,20 @@ func DefaultCleanupPolicy() CleanupPolicy {
 	}
 }
 
-// Allocator is a function type that creates new objects for the pool
+// Allocator is a function type that creates new objects for the pool.
 type Allocator[T any] func() *T
 
-// Cleaner is a function type that cleans up objects before they are returned to the pool
+// Cleaner is a function type that cleans up objects before they are returned to the pool.
 type Cleaner[T any] func(*T)
 
-// PoolObject wraps any type to make it suitable for pooling
+// PoolObject wraps any type to make it suitable for pooling.
 type PoolObject[T any] struct {
 	Inner      *T
 	usageCount atomic.Int64
 	next       atomic.Pointer[PoolObject[T]]
 }
 
-// GetNext returns the next object in the pool's linked list
+// GetNext returns the next object in the pool's linked list.
 func (p *PoolObject[T]) GetNext() *PoolObject[T] {
 	if next := p.next.Load(); next != nil {
 		return next
@@ -65,27 +65,27 @@ func (p *PoolObject[T]) GetNext() *PoolObject[T] {
 	return nil
 }
 
-// SetNext sets the next object in the pool's linked list
+// SetNext sets the next object in the pool's linked list.
 func (p *PoolObject[T]) SetNext(next *PoolObject[T]) {
 	p.next.Store(next)
 }
 
-// GetUsageCount returns the number of times this object has been used
+// GetUsageCount returns the number of times this object has been used.
 func (p *PoolObject[T]) GetUsageCount() int64 {
 	return p.usageCount.Load()
 }
 
-// IncrementUsage increments the usage count of this object
+// IncrementUsage increments the usage count of this object.
 func (p *PoolObject[T]) IncrementUsage() {
 	p.usageCount.Add(1)
 }
 
-// ResetUsage resets the usage count to 0
+// ResetUsage resets the usage count to 0.
 func (p *PoolObject[T]) ResetUsage() {
 	p.usageCount.Store(0)
 }
 
-// PoolConfig holds configuration options for the pool
+// PoolConfig holds configuration options for the pool.
 type PoolConfig[T any] struct {
 	// Cleanup defines the cleanup policy for the pool
 	Cleanup CleanupPolicy
@@ -95,7 +95,7 @@ type PoolConfig[T any] struct {
 	Cleaner Cleaner[T]
 }
 
-// DefaultConfig returns a default pool configuration for type T
+// DefaultConfig returns a default pool configuration for type T.
 func DefaultConfig[T any](allocator Allocator[T], cleaner Cleaner[T]) PoolConfig[T] {
 	return PoolConfig[T]{
 		Cleanup:   DefaultCleanupPolicy(),
@@ -104,7 +104,7 @@ func DefaultConfig[T any](allocator Allocator[T], cleaner Cleaner[T]) PoolConfig
 	}
 }
 
-// PoolShard represents a single shard in the pool
+// PoolShard represents a single shard in the pool.
 type PoolShard[T any] struct {
 	// head is the head of the linked list for this shard
 	head atomic.Pointer[PoolObject[T]]
@@ -113,7 +113,7 @@ type PoolShard[T any] struct {
 	_ [64 - unsafe.Sizeof(atomic.Pointer[PoolObject[T]]{})%64]byte
 }
 
-// ShardedPool is the main pool implementation using sharding for better concurrency
+// ShardedPool is the main pool implementation using sharding for better concurrency.
 type ShardedPool[T any] struct {
 	// shards is a slice of pool shards, each on its own cache line
 	shards []*PoolShard[T]
@@ -128,12 +128,12 @@ type ShardedPool[T any] struct {
 	cfg PoolConfig[T]
 }
 
-// NewPool creates a new sharded pool with the given configuration
+// NewPool creates a new sharded pool with the given configuration.
 func NewPool[T any](allocator Allocator[T], cleaner Cleaner[T]) (*ShardedPool[T], error) {
 	return NewPoolWithConfig(DefaultConfig(allocator, cleaner))
 }
 
-// NewPoolWithConfig creates a new sharded pool with the specified configuration
+// NewPoolWithConfig creates a new sharded pool with the specified configuration.
 func NewPoolWithConfig[T any](cfg PoolConfig[T]) (*ShardedPool[T], error) {
 	if cfg.Allocator == nil {
 		return nil, fmt.Errorf("%w: allocator is required", ErrNoAllocator)
@@ -150,7 +150,7 @@ func NewPoolWithConfig[T any](cfg PoolConfig[T]) (*ShardedPool[T], error) {
 
 	for i := range p.shards {
 		p.shards[i] = &PoolShard[T]{}
-		p.shards[i].head.Store((*PoolObject[T])(nil))
+		p.shards[i].head.Store(nil)
 	}
 
 	if cfg.Cleanup.Enabled {
@@ -166,17 +166,17 @@ func NewPoolWithConfig[T any](cfg PoolConfig[T]) (*ShardedPool[T], error) {
 	return p, nil
 }
 
-// getShard returns the shard for the current goroutine
+// getShard returns the shard for the current goroutine.
 func (p *ShardedPool[T]) getShard() *PoolShard[T] {
-	// Use goroutine's processor ID for shard selection
-	// This provides better locality for goroutines that frequently access the pool
+	// Use goroutine's processor ID for shard selection.
+	// This provides better locality for goroutines that frequently access the pool.
 	id := runtime_procPin()
 	runtime_procUnpin()
 
-	return p.shards[id]
+	return p.shards[id%numShards] // ensure we don't get "index out of bounds error" if number of P's changes.
 }
 
-// RetrieveOrCreate gets an object from the pool or creates a new one
+// RetrieveOrCreate gets an object from the pool or creates a new one.
 func (p *ShardedPool[T]) RetrieveOrCreate() *T {
 	shard := p.getShard()
 
@@ -190,7 +190,7 @@ func (p *ShardedPool[T]) RetrieveOrCreate() *T {
 	return p.cfg.Allocator()
 }
 
-// Put returns an object to the pool
+// Put returns an object to the pool.
 func (p *ShardedPool[T]) Put(obj *T) {
 	p.cfg.Cleaner(obj)
 
@@ -211,11 +211,10 @@ func (p *ShardedPool[T]) Put(obj *T) {
 	}
 }
 
-// retrieveFromShard gets an object from a specific shard
+// retrieveFromShard gets an object from a specific shard.
 func (p *ShardedPool[T]) retrieveFromShard(shard *PoolShard[T]) *PoolObject[T] {
 	for {
 		oldHead := shard.head.Load()
-
 		if oldHead == nil {
 			return nil
 		}
@@ -227,7 +226,7 @@ func (p *ShardedPool[T]) retrieveFromShard(shard *PoolShard[T]) *PoolObject[T] {
 	}
 }
 
-// Clear removes all objects from the pool
+// Clear removes all objects from the pool.
 func (p *ShardedPool[T]) clear() {
 	for _, shard := range p.shards {
 		for {
@@ -252,7 +251,7 @@ func (p *ShardedPool[T]) clear() {
 	}
 }
 
-// startCleaner starts the background cleanup goroutine
+// startCleaner starts the background cleanup goroutine.
 func (p *ShardedPool[T]) startCleaner() {
 	p.cleanWg.Add(1)
 	go func() {
@@ -271,7 +270,7 @@ func (p *ShardedPool[T]) startCleaner() {
 	}()
 }
 
-// cleanup removes idle objects based on the cleanup policy
+// cleanup removes idle objects based on the [CleanupPolicy].
 func (p *ShardedPool[T]) cleanup() {
 	if !p.cfg.Cleanup.Enabled {
 		return
@@ -336,7 +335,7 @@ func (p *ShardedPool[T]) cleanupShard(shard *PoolShard[T]) {
 	}
 }
 
-// Close stops the cleanup goroutine and clears the pool
+// Close stops the cleanup goroutine and clears the pool.
 func (p *ShardedPool[T]) Close() {
 	if p.cfg.Cleanup.Enabled {
 		close(p.stopClean)
