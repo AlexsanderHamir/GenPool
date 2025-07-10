@@ -35,14 +35,14 @@ GenPool delivers better performance than sync.Pool in high or unpredictable late
 
 ### Benchmark Results
 
-| Latency Level | Metric         | GenPool   | SyncPool  | Delta Value | Delta % |
-| ------------- | -------------- | --------- | --------- | ----------- | ------- |
-| **High**      | Avg Iterations | 91,050    | 85,217    | -5,833      | -6.41%  |
-|               | Avg Time (ns)  | 12,278    | 12,778    | +500        | +4.07%  |
-| **Moderate**  | Avg Iterations | 865,793   | 864,402   | -1,391      | -0.16%  |
-|               | Avg Time (ns)  | 1,245.3   | 1,249.9   | +4.6        | +0.37%  |
-| **Low**       | Avg Iterations | 6,230,961 | 6,326,247 | +95,286     | +1.53%  |
-|               | Avg Time (ns)  | 190.13    | 186.88    | -3.25       | -1.71%  |
+| Latency Level | Metric         | GenPool   | SyncPool  | Delta Value | Delta %    |
+| ------------- | -------------- | --------- | --------- | ----------- | ---------- |
+| **High**      | Avg Iterations | 92,090    | 85,018    | +7,072      | +8.32%     |
+|               | Avg Time (ns)  | 12,268    | 13,070    | **-802**    | **-6.14%** |
+| **Moderate**  | Avg Iterations | 869,492   | 840,131   | +29,361     | +3.49%     |
+|               | Avg Time (ns)  | 1,223.8   | 1,316.7   | **-92.9**   | **-7.05%** |
+| **Low**       | Avg Iterations | 6,004,695 | 6,099,886 | -95,191     | -1.56%     |
+|               | Avg Time (ns)  | 197.46    | 194.26    | **+3.2**    | **+1.65%** |
 
 > **Full benchmark details:** [GenPool vs sync.Pool](./benchmark_results_transparency)
 
