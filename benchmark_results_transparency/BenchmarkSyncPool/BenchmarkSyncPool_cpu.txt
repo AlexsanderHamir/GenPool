@@ -1,381 +1,319 @@
 File: pool.test
 Type: cpu
-Time: 2025-06-21 12:14:24 PDT
-Duration: 116.68s, Total samples = 694.90s (595.57%)
-Showing nodes accounting for 694.90s, 100% of 694.90s total
+Time: 2025-07-10 14:56:18 PDT
+Duration: 33.32s, Total samples = 184.71s (554.29%)
+Showing nodes accounting for 184.71s, 100% of 184.71s total
       flat  flat%   sum%        cum   cum%
-     0.06s 0.0086% 0.0086%    451.71s 65.00%  testing.(*B).RunParallel.func1
-     0.60s 0.086% 0.095%    450.78s 64.87%  github.com/AlexsanderHamir/GenPool/pool.BenchmarkSyncPool.func2
-    52.23s  7.52%  7.61%    448.55s 64.55%  github.com/AlexsanderHamir/GenPool/pool.performWorkload
-    63.63s  9.16% 16.77%    392.66s 56.51%  math/rand.Intn
-    63.93s  9.20% 25.97%    271.45s 39.06%  math/rand.(*Rand).Intn
-    42.02s  6.05% 32.01%    207.42s 29.85%  math/rand.(*Rand).Int31n
-         0     0% 32.01%    165.36s 23.80%  math/rand.(*Rand).Int31 (inline)
-    12.22s  1.76% 33.77%    165.36s 23.80%  math/rand.(*Rand).Int63 (inline)
-    52.08s  7.49% 41.27%    153.13s 22.04%  math/rand.(*runtimeSource).Int63
-   145.10s 20.88% 62.15%    145.10s 20.88%  internal/chacha8rand.block
-    39.30s  5.66% 67.80%    100.93s 14.52%  runtime.rand
-    57.37s  8.26% 76.06%     57.51s  8.28%  math/rand.globalRand
-    47.03s  6.77% 82.83%     47.03s  6.77%  internal/chacha8rand.(*State).Next (inline)
-     0.04s 0.0058% 82.83%     45.23s  6.51%  runtime.mcall
-         0     0% 82.83%     44.53s  6.41%  runtime/trace.Start.func1
-         0     0% 82.83%     44.52s  6.41%  internal/poll.(*FD).Write
-         0     0% 82.83%     44.52s  6.41%  internal/poll.ignoringEINTRIO (inline)
-         0     0% 82.83%     44.52s  6.41%  os.(*File).Write
-         0     0% 82.83%     44.52s  6.41%  os.(*File).write (inline)
-         0     0% 82.83%     44.52s  6.41%  syscall.Write (inline)
-    44.51s  6.41% 89.24%     44.52s  6.41%  syscall.syscall
-         0     0% 89.24%     44.52s  6.41%  syscall.write
-     0.24s 0.035% 89.27%     41.67s  6.00%  runtime.park_m
-     0.71s   0.1% 89.38%     38.30s  5.51%  runtime.schedule
-     0.26s 0.037% 89.41%     30.82s  4.44%  runtime.findRunnable
-     0.49s 0.071% 89.48%     23.50s  3.38%  runtime.(*timers).check
-     0.24s 0.035% 89.52%     20.79s  2.99%  runtime.(*timers).run
-     0.48s 0.069% 89.59%     20.07s  2.89%  runtime.(*timer).unlockAndRun
-     0.26s 0.037% 89.62%     18.17s  2.61%  runtime.goroutineReady
-     0.05s 0.0072% 89.63%     17.91s  2.58%  runtime.goready (inline)
-     0.07s  0.01% 89.64%     17.86s  2.57%  runtime.goroutineReady.goready.func1
-     0.14s  0.02% 89.66%     17.79s  2.56%  runtime.ready
-    12.57s  1.81% 91.47%     14.60s  2.10%  internal/chacha8rand.(*State).Refill
-     1.68s  0.24% 91.71%     12.33s  1.77%  runtime.wakep
-     0.24s 0.035% 91.75%      8.85s  1.27%  runtime.traceEventWriter.event
-     0.40s 0.058% 91.80%      8.57s  1.23%  runtime.traceWriter.event
-         0     0% 91.80%      8.47s  1.22%  runtime.lock (partial-inline)
-     0.01s 0.0014% 91.81%      8.47s  1.22%  runtime.lockWithRank (inline)
-     1.12s  0.16% 91.97%      8.46s  1.22%  runtime.lock2
-     0.03s 0.0043% 91.97%      8.01s  1.15%  runtime.nanotime (inline)
-     7.47s  1.07% 93.05%      7.98s  1.15%  runtime.nanotime1
-     7.41s  1.07% 94.11%      7.41s  1.07%  runtime.usleep
-         0     0% 94.11%      7.05s  1.01%  runtime.osyield (inline)
-     0.19s 0.027% 94.14%      6.89s  0.99%  runtime.systemstack
-     0.25s 0.036% 94.18%      6.31s  0.91%  runtime.execute
-     0.09s 0.013% 94.19%      5.47s  0.79%  runtime.traceLocker.GoPark
-         0     0% 94.19%      5.28s  0.76%  runtime.(*mheap).allocSpan
-     5.28s  0.76% 94.95%      5.28s  0.76%  runtime.madvise
-         0     0% 94.95%      5.20s  0.75%  runtime.sysUsed (inline)
-         0     0% 94.95%      5.20s  0.75%  runtime.sysUsedOS (inline)
-     0.13s 0.019% 94.97%      5.14s  0.74%  runtime.traceLocker.GoUnpark
-         0     0% 94.97%      4.64s  0.67%  runtime.traceClockNow (inline)
-         0     0% 94.97%      4.58s  0.66%  runtime.(*mheap).alloc.func1
-     0.16s 0.023% 94.99%      4.25s  0.61%  runtime.traceLocker.GoStart
-     0.02s 0.0029% 94.99%      4.16s   0.6%  runtime.traceLocker.stack (inline)
-     1.03s  0.15% 95.14%      4.14s   0.6%  runtime.traceStack
-     0.01s 0.0014% 95.14%      3.72s  0.54%  runtime.goschedImpl
-         0     0% 95.14%      3.61s  0.52%  runtime.gopreempt_m (inline)
-         0     0% 95.14%      3.61s  0.52%  runtime.newstack
-         0     0% 95.14%      3.44s   0.5%  runtime.unlock (inline)
-     0.01s 0.0014% 95.14%      3.44s   0.5%  runtime.unlockWithRank (inline)
-     2.15s  0.31% 95.45%      3.43s  0.49%  runtime.unlock2
-         0     0% 95.45%      3.41s  0.49%  runtime.goexit0
-     0.07s  0.01% 95.46%      3.21s  0.46%  runtime.resetForSleep
-     0.02s 0.0029% 95.47%      3.14s  0.45%  runtime.(*timer).reset (inline)
-     0.26s 0.037% 95.50%      3.12s  0.45%  runtime.(*timer).modify
-     0.70s   0.1% 95.61%      2.82s  0.41%  time.Sleep
-         0     0% 95.61%      2.73s  0.39%  runtime.morestack
-         0     0% 95.61%      2.69s  0.39%  runtime.semasleep
-     2.64s  0.38% 95.99%      2.64s  0.38%  runtime.pthread_cond_wait
-     2.51s  0.36% 96.35%      2.51s  0.36%  internal/runtime/atomic.(*Int32).CompareAndSwap (inline)
-         0     0% 96.35%      2.45s  0.35%  runtime.stopm
-         0     0% 96.35%      2.39s  0.34%  runtime.mPark (inline)
-         0     0% 96.35%      2.39s  0.34%  runtime.notesleep
-     0.21s  0.03% 96.38%      2.30s  0.33%  runtime.(*timer).maybeAdd
-     2.27s  0.33% 96.70%      2.27s  0.33%  runtime.(*traceBuf).varint (inline)
-     0.03s 0.0043% 96.71%      2.12s  0.31%  runtime.pidlegetSpinning
-     2.08s   0.3% 97.01%      2.09s   0.3%  runtime.pidleget
-     0.60s 0.086% 97.09%      1.71s  0.25%  runtime.casgstatus
-     0.26s 0.037% 97.13%      1.69s  0.24%  runtime.(*traceStackTable).put
-     0.48s 0.069% 97.20%      1.62s  0.23%  runtime.(*traceMap).put
-     0.91s  0.13% 97.33%      1.36s   0.2%  runtime.traceLocker.eventWriter
-     1.30s  0.19% 97.52%      1.30s  0.19%  runtime.pthread_cond_signal
-         0     0% 97.52%      1.30s  0.19%  runtime.semawakeup
-     1.29s  0.19% 97.70%      1.29s  0.19%  runtime.duffzero
-     0.13s 0.019% 97.72%      1.10s  0.16%  runtime.mallocgc
-     0.05s 0.0072% 97.73%      1.10s  0.16%  runtime.traceAcquire (inline)
-     0.07s  0.01% 97.74%      1.08s  0.16%  runtime.(*timers).unlock (inline)
-     0.28s  0.04% 97.78%      1.04s  0.15%  sync.(*Pool).Get
-     0.49s 0.071% 97.85%      1.01s  0.15%  runtime.traceWriter.ensure
-         0     0% 97.85%      0.95s  0.14%  runtime.gcBgMarkWorker.func2
-     0.06s 0.0086% 97.86%      0.95s  0.14%  runtime.gcDrain
-         0     0% 97.86%      0.93s  0.13%  runtime.(*timer).unlock (inline)
-     0.62s 0.089% 97.95%      0.92s  0.13%  runtime.traceAcquireEnabled
-     0.01s 0.0014% 97.95%      0.88s  0.13%  runtime.newproc.func1
-     0.43s 0.062% 98.01%      0.79s  0.11%  runtime.(*timer).updateHeap
-         0     0% 98.01%      0.79s  0.11%  runtime.(*timers).lock (inline)
-     0.12s 0.017% 98.03%      0.77s  0.11%  runtime.growslice
-     0.04s 0.0058% 98.03%      0.76s  0.11%  runtime.newobject
-     0.02s 0.0029% 98.04%      0.75s  0.11%  runtime.newproc1
-         0     0% 98.04%      0.70s   0.1%  runtime.(*mheap).allocManual
-     0.16s 0.023% 98.06%      0.69s 0.099%  runtime.gopark
-         0     0% 98.06%      0.68s 0.098%  runtime.notewakeup
-         0     0% 98.06%      0.67s 0.096%  runtime.startm
-     0.55s 0.079% 98.14%      0.66s 0.095%  runtime.(*mLockProfile).recordUnlock
-     0.02s 0.0029% 98.14%      0.66s 0.095%  runtime.stealWork
-         0     0% 98.14%      0.65s 0.094%  runtime.gcDrainMarkWorkerIdle (inline)
-     0.15s 0.022% 98.16%      0.65s 0.094%  runtime.mallocgcSmallScanNoHeader
-     0.01s 0.0014% 98.17%      0.64s 0.092%  runtime.unlock2Wake
-     0.60s 0.086% 98.25%      0.60s 0.086%  internal/runtime/atomic.(*Uint32).CompareAndSwap (inline)
-         0     0% 98.25%      0.57s 0.082%  runtime.(*gcWork).balance
-     0.01s 0.0014% 98.25%      0.55s 0.079%  runtime.gfget
-     0.51s 0.073% 98.33%      0.51s 0.073%  runtime.asyncPreempt
-     0.51s 0.073% 98.40%      0.51s 0.073%  runtime.libcCall
-         0     0% 98.40%      0.51s 0.073%  runtime.stackalloc
-         0     0% 98.40%      0.51s 0.073%  runtime.stackcacherefill
-         0     0% 98.40%      0.51s 0.073%  runtime.stackpoolalloc
-         0     0% 98.40%      0.50s 0.072%  runtime.gfget.func2
-     0.48s 0.069% 98.47%      0.48s 0.069%  aeshashbody
-     0.40s 0.058% 98.53%      0.48s 0.069%  sync.(*Pool).pin
-     0.47s 0.068% 98.59%      0.47s 0.068%  runtime.releasem (inline)
-     0.05s 0.0072% 98.60%      0.45s 0.065%  runtime.(*traceMap).newTraceMapNode
-     0.45s 0.065% 98.67%      0.45s 0.065%  runtime.mmap
-         0     0% 98.67%      0.45s 0.065%  runtime.sysAlloc
-         0     0% 98.67%      0.45s 0.065%  runtime.sysAllocOS (inline)
-         0     0% 98.67%      0.44s 0.063%  runtime.resetspinning
-     0.35s  0.05% 98.72%      0.43s 0.062%  runtime.traceReader
-     0.18s 0.026% 98.74%      0.41s 0.059%  runtime.(*timers).addHeap
-         0     0% 98.74%      0.41s 0.059%  runtime.preemptM
-         0     0% 98.74%      0.41s 0.059%  runtime.preemptone
-     0.41s 0.059% 98.80%      0.41s 0.059%  runtime.pthread_kill
-         0     0% 98.80%      0.41s 0.059%  runtime.signalM (inline)
-     0.08s 0.012% 98.81%      0.41s 0.059%  runtime.traceWriter.refill.func1
-         0     0% 98.81%      0.40s 0.058%  runtime.(*gcControllerState).enlistWorker
-     0.01s 0.0014% 98.81%      0.40s 0.058%  runtime.runqsteal
-         0     0% 98.81%      0.40s 0.058%  runtime.traceWriter.refill
-     0.39s 0.056% 98.87%      0.39s 0.056%  runtime.(*guintptr).cas (inline)
-     0.02s 0.0029% 98.87%      0.39s 0.056%  runtime.gcBgMarkWorker
-         0     0% 98.87%      0.39s 0.056%  runtime.runSafePointFn
-     0.02s 0.0029% 98.88%      0.39s 0.056%  runtime.runqget (inline)
-     0.03s 0.0043% 98.88%      0.39s 0.056%  runtime.runqgrab
-         0     0% 98.88%      0.36s 0.052%  runtime.(*traceRegionAlloc).alloc
-     0.33s 0.047% 98.93%      0.35s  0.05%  runtime.traceLocker.emitUnblockStatus
-     0.16s 0.023% 98.95%      0.35s  0.05%  sync.(*Pool).Put
-     0.15s 0.022% 98.97%      0.33s 0.047%  runtime.(*timers).deleteMin
-     0.17s 0.024% 99.00%      0.31s 0.045%  runtime.globrunqget
-     0.30s 0.043% 99.04%      0.30s 0.043%  runtime.(*traceSchedResourceState).statusWasTraced (inline)
-         0     0% 99.04%      0.30s 0.043%  runtime.gcDrainMarkWorkerDedicated (inline)
-     0.01s 0.0014% 99.04%      0.29s 0.042%  runtime.(*timer).lock (inline)
-     0.28s  0.04% 99.08%      0.28s  0.04%  internal/runtime/atomic.(*Uintptr).Add (inline)
-     0.22s 0.032% 99.11%      0.28s  0.04%  runtime.runqput
-     0.27s 0.039% 99.15%      0.27s 0.039%  runtime.memclrNoHeapPointers
-     0.27s 0.039% 99.19%      0.27s 0.039%  runtime.nextFreeFast (inline)
-     0.10s 0.014% 99.21%      0.27s 0.039%  runtime.traceRelease (inline)
-     0.24s 0.035% 99.24%      0.25s 0.036%  runtime.(*timers).cleanHead
-         0     0% 99.24%      0.25s 0.036%  runtime.(*traceAdvancerState).start.func1
-     0.25s 0.036% 99.28%      0.25s 0.036%  runtime.(*traceBuf).byte (inline)
-     0.06s 0.0086% 99.28%      0.25s 0.036%  runtime.mallocgcSmallNoscan
-         0     0% 99.28%      0.25s 0.036%  runtime.traceAdvance
-     0.24s 0.035% 99.32%      0.24s 0.035%  runtime.kevent
-         0     0% 99.32%      0.24s 0.035%  runtime.netpoll
-     0.09s 0.013% 99.33%      0.24s 0.035%  runtime.scanobject
-         0     0% 99.33%      0.24s 0.035%  testing.(*B).runN
-     0.15s 0.022% 99.35%      0.24s 0.035%  testing.(*PB).Next (inline)
-         0     0% 99.35%      0.23s 0.033%  github.com/AlexsanderHamir/GenPool/pool.BenchmarkSyncPool
-     0.23s 0.033% 99.39%      0.23s 0.033%  runtime.(*timers).siftUp
-         0     0% 99.39%      0.23s 0.033%  testing.(*B).RunParallel
-         0     0% 99.39%      0.21s  0.03%  github.com/AlexsanderHamir/GenPool/pool.BenchmarkSyncPool.func1
-         0     0% 99.39%      0.21s  0.03%  github.com/AlexsanderHamir/GenPool/pool.allocator (inline)
-     0.15s 0.022% 99.41%      0.21s  0.03%  gogo
-         0     0% 99.41%      0.21s  0.03%  runtime.getempty
-         0     0% 99.41%      0.21s  0.03%  runtime.newproc
-     0.20s 0.029% 99.44%      0.20s 0.029%  runtime.(*timer).needsAdd (inline)
-     0.20s 0.029% 99.47%      0.20s 0.029%  runtime.fpTracebackPCs (inline)
-         0     0% 99.47%      0.19s 0.027%  runtime.(*traceStringTable).put
-         0     0% 99.47%      0.19s 0.027%  runtime.getempty.func1
-         0     0% 99.47%      0.19s 0.027%  runtime.traceRegisterLabelsAndReasons
-     0.18s 0.026% 99.49%      0.18s 0.026%  internal/runtime/atomic.(*Uint8).Load (inline)
-         0     0% 99.49%      0.18s 0.026%  runtime.handoff
-     0.11s 0.016% 99.51%      0.16s 0.023%  runtime.(*timeHistogram).record
-     0.05s 0.0072% 99.52%      0.16s 0.023%  sync.(*Pool).getSlow
-         0     0% 99.52%      0.15s 0.022%  runtime.(*mcache).nextFree
-     0.02s 0.0029% 99.52%      0.15s 0.022%  runtime.(*mcache).refill
-     0.15s 0.022% 99.54%      0.15s 0.022%  runtime.(*timers).siftDown
-     0.07s  0.01% 99.55%      0.15s 0.022%  runtime.heapSetTypeNoHeader (inline)
-     0.15s 0.022% 99.57%      0.15s 0.022%  runtime.memequal
-     0.01s 0.0014% 99.57%      0.15s 0.022%  runtime.traceLocker.GoCreate
-     0.14s  0.02% 99.59%      0.14s  0.02%  internal/runtime/atomic.(*Uint32).Load (inline)
-     0.14s  0.02% 99.61%      0.14s  0.02%  runtime.traceEnabled (inline)
-         0     0% 99.61%      0.14s  0.02%  testing.(*B).launch
-     0.07s  0.01% 99.62%      0.12s 0.017%  internal/runtime/atomic.(*Bool).Load (inline)
-     0.12s 0.017% 99.64%      0.12s 0.017%  runtime.(*traceBuf).available (inline)
-     0.12s 0.017% 99.66%      0.12s 0.017%  runtime.acquirem (inline)
-     0.11s 0.016% 99.67%      0.11s 0.016%  internal/runtime/atomic.(*Int32).Add (inline)
-     0.01s 0.0014% 99.67%      0.11s 0.016%  runtime.(*mLockProfile).store
-         0     0% 99.67%      0.11s 0.016%  runtime.(*mcentral).cacheSpan
-         0     0% 99.67%      0.11s 0.016%  runtime.gosched_m
-         0     0% 99.67%      0.11s 0.016%  runtime.traceWriter.writeProcStatus
-     0.11s 0.016% 99.69%      0.11s 0.016%  sync.(*poolChain).popTail
-     0.01s 0.0014% 99.69%      0.10s 0.014%  runtime.goexit1
-     0.03s 0.0043% 99.70%      0.10s 0.014%  runtime.saveBlockEventStack
-     0.10s 0.014% 99.71%      0.10s 0.014%  runtime.traceLocker.writer (inline)
-         0     0% 99.71%      0.10s 0.014%  runtime.traceStartReadCPU.func1
-         0     0% 99.71%      0.10s 0.014%  testing.(*B).run1.func1
-         0     0% 99.71%      0.09s 0.013%  runtime.wakeNetPoller
-     0.09s 0.013% 99.72%      0.09s 0.013%  sync/atomic.(*Uint64).Add (inline)
-         0     0% 99.72%      0.08s 0.012%  runtime.(*mcentral).grow
-     0.05s 0.0072% 99.73%      0.08s 0.012%  runtime.(*mspan).writeHeapBitsSmall
-         0     0% 99.73%      0.08s 0.012%  runtime.(*pageAlloc).scavenge.func1
-         0     0% 99.73%      0.08s 0.012%  runtime.(*pageAlloc).scavengeOne
-         0     0% 99.73%      0.08s 0.012%  runtime.gdestroy
-     0.08s 0.012% 99.74%      0.08s 0.012%  runtime.memmove
-     0.08s 0.012% 99.75%      0.08s 0.012%  runtime.procPin (inline)
-         0     0% 99.75%      0.08s 0.012%  runtime.sysUnused (inline)
-         0     0% 99.75%      0.08s 0.012%  runtime.sysUnusedOS (inline)
-         0     0% 99.75%      0.08s 0.012%  runtime.traceReadCPU
-     0.02s 0.0029% 99.76%      0.08s 0.012%  runtime.traceReaderAvailable (inline)
-     0.08s 0.012% 99.77%      0.08s 0.012%  runtime.traceWriter.end (inline)
-         0     0% 99.77%      0.08s 0.012%  sync.runtime_procPin
-     0.07s  0.01% 99.78%      0.07s  0.01%  internal/runtime/atomic.(*Int32).Load (inline)
-     0.06s 0.0086% 99.79%      0.07s  0.01%  runtime.(*timers).wakeTime (inline)
-     0.04s 0.0058% 99.79%      0.07s  0.01%  runtime.mallocgcTiny
-         0     0% 99.79%      0.07s  0.01%  runtime.traceLocker.GoEnd
-         0     0% 99.79%      0.07s  0.01%  runtime.traceLocker.GoPreempt (inline)
-         0     0% 99.79%      0.07s  0.01%  runtime.traceLocker.GoStop
-     0.06s 0.0086% 99.80%      0.06s 0.0086%  internal/runtime/atomic.(*Uint64).Add (inline)
-     0.06s 0.0086% 99.81%      0.06s 0.0086%  runtime.(*gQueue).pop (inline)
-         0     0% 99.81%      0.06s 0.0086%  runtime.(*mheap).alloc
-     0.06s 0.0086% 99.82%      0.06s 0.0086%  runtime.memhash
-     0.06s 0.0086% 99.83%      0.06s 0.0086%  runtime.save_g
-         0     0% 99.83%      0.06s 0.0086%  runtime.startTheWorldWithSema
-     0.04s 0.0058% 99.83%      0.06s 0.0086%  runtime.typePointers.next
-     0.01s 0.0014% 99.83%      0.06s 0.0086%  runtime/pprof.profileWriter
-     0.05s 0.0072% 99.84%      0.05s 0.0072%  runtime.puintptr.ptr (inline)
-     0.04s 0.0058% 99.85%      0.04s 0.0058%  runtime.getMCache (inline)
-     0.04s 0.0058% 99.85%      0.04s 0.0058%  runtime.gogo
-     0.03s 0.0043% 99.86%      0.04s 0.0058%  runtime.greyobject
-         0     0% 99.86%      0.04s 0.0058%  runtime.notetsleep
-         0     0% 99.86%      0.04s 0.0058%  runtime.notetsleep_internal
-     0.04s 0.0058% 99.86%      0.04s 0.0058%  runtime.pthread_cond_timedwait_relative_np
-         0     0% 99.86%      0.04s 0.0058%  runtime.runqputslow
-     0.03s 0.0043% 99.87%      0.04s 0.0058%  runtime.stkbucket
-         0     0% 99.87%      0.04s 0.0058%  runtime.stopTheWorld.func1
-         0     0% 99.87%      0.04s 0.0058%  runtime.stopTheWorldWithSema
-         0     0% 99.87%      0.04s 0.0058%  runtime.sweepone
-     0.03s 0.0043% 99.87%      0.03s 0.0043%  internal/runtime/atomic.(*Int64).Load (inline)
-     0.03s 0.0043% 99.88%      0.03s 0.0043%  internal/runtime/atomic.(*Uint8).Store (inline)
-     0.03s 0.0043% 99.88%      0.03s 0.0043%  internal/runtime/atomic.(*Uintptr).Load (inline)
-         0     0% 99.88%      0.03s 0.0043%  runtime.(*gcWork).init
-         0     0% 99.88%      0.03s 0.0043%  runtime.(*gcWork).tryGet
-         0     0% 99.88%      0.03s 0.0043%  runtime.(*spanSet).push
-     0.03s 0.0043% 99.88%      0.03s 0.0043%  runtime.(*timers).updateMinWhenHeap (inline)
-         0     0% 99.88%      0.03s 0.0043%  runtime.(*traceSchedResourceState).acquireStatus (inline)
-         0     0% 99.88%      0.03s 0.0043%  runtime.(*traceSchedResourceState).readyNextGen (inline)
-         0     0% 99.88%      0.03s 0.0043%  runtime.(*traceStackTable).dump
-         0     0% 99.88%      0.03s 0.0043%  runtime.ReadTrace.func1
-         0     0% 99.88%      0.03s 0.0043%  runtime.bgsweep
-     0.02s 0.0029% 99.89%      0.03s 0.0043%  runtime.checkIdleGCNoP
-         0     0% 99.89%      0.03s 0.0043%  runtime.gcMarkTermination.func3
-     0.03s 0.0043% 99.89%      0.03s 0.0043%  runtime.getGCMask (inline)
-         0     0% 99.89%      0.03s 0.0043%  runtime.isSystemGoroutine
-     0.03s 0.0043% 99.90%      0.03s 0.0043%  runtime.procUnpin (inline)
-         0     0% 99.90%      0.03s 0.0043%  runtime.readTrace0
-     0.02s 0.0029% 99.90%      0.03s 0.0043%  runtime.roundupsize (inline)
-     0.03s 0.0043% 99.90%      0.03s 0.0043%  runtime.typePointers.nextFast (inline)
-     0.01s 0.0014% 99.91%      0.03s 0.0043%  runtime/pprof.readProfile
-     0.03s 0.0043% 99.91%      0.03s 0.0043%  sync.(*poolChain).popHead
-         0     0% 99.91%      0.03s 0.0043%  sync.(*poolChain).pushHead
-         0     0% 99.91%      0.03s 0.0043%  sync.runtime_procUnpin
-     0.02s 0.0029% 99.91%      0.02s 0.0029%  internal/runtime/atomic.(*Int64).Add (inline)
-     0.02s 0.0029% 99.92%      0.02s 0.0029%  internal/runtime/atomic.(*Uint32).Store (inline)
-     0.02s 0.0029% 99.92%      0.02s 0.0029%  internal/runtime/atomic.(*UnsafePointer).Load (inline)
-     0.02s 0.0029% 99.92%      0.02s 0.0029%  runtime.(*atomicHeadTailIndex).incTail
-     0.01s 0.0014% 99.92%      0.02s 0.0029%  runtime.(*gcControllerState).addScannableStack (inline)
-     0.02s 0.0029% 99.93%      0.02s 0.0029%  runtime.(*gcWork).tryGetFast (inline)
-         0     0% 99.93%      0.02s 0.0029%  runtime.(*lockTimer).begin
-         0     0% 99.93%      0.02s 0.0029%  runtime.(*mcentral).uncacheSpan
-     0.01s 0.0014% 99.93%      0.02s 0.0029%  runtime.(*mheap).allocMSpanLocked
-     0.01s 0.0014% 99.93%      0.02s 0.0029%  runtime.(*mheap).initSpan
-         0     0% 99.93%      0.02s 0.0029%  runtime.(*moduledata).funcName
-     0.02s 0.0029% 99.93%      0.02s 0.0029%  runtime.(*mspan).base (inline)
-         0     0% 99.93%      0.02s 0.0029%  runtime.(*mspan).initHeapBits
-         0     0% 99.93%      0.02s 0.0029%  runtime.(*sweepLocked).sweep
-         0     0% 99.93%      0.02s 0.0029%  runtime.(*sweepLocked).sweep.(*mheap).freeSpan.func2
-         0     0% 99.93%      0.02s 0.0029%  runtime.(*traceMap).reset
-         0     0% 99.93%      0.02s 0.0029%  runtime.(*traceRegionAlloc).drop
-     0.02s 0.0029% 99.93%      0.02s 0.0029%  runtime.(*traceSchedResourceState).nextSeq (inline)
-         0     0% 99.93%      0.02s 0.0029%  runtime.(*wakeableSleep).sleep
-     0.02s 0.0029% 99.94%      0.02s 0.0029%  runtime.bool2int (inline)
-     0.01s 0.0014% 99.94%      0.02s 0.0029%  runtime.cputicks (inline)
-     0.02s 0.0029% 99.94%      0.02s 0.0029%  runtime.divRoundUp (inline)
-     0.02s 0.0029% 99.94%      0.02s 0.0029%  runtime.dropg (inline)
-     0.01s 0.0014% 99.95%      0.02s 0.0029%  runtime.findObject
-     0.01s 0.0014% 99.95%      0.02s 0.0029%  runtime.findnull
-         0     0% 99.95%      0.02s 0.0029%  runtime.forEachGRace
-         0     0% 99.95%      0.02s 0.0029%  runtime.freeStackSpans
-         0     0% 99.95%      0.02s 0.0029%  runtime.funcname (inline)
-         0     0% 99.95%      0.02s 0.0029%  runtime.gcStart.func4
-     0.01s 0.0014% 99.95%      0.02s 0.0029%  runtime.gfput
-         0     0% 99.95%      0.02s 0.0029%  runtime.gostringnocopy (inline)
-         0     0% 99.95%      0.02s 0.0029%  runtime.makeSpanClass (inline)
-         0     0% 99.95%      0.02s 0.0029%  runtime.makeslice
-     0.02s 0.0029%   100%      0.02s 0.0029%  runtime.munmap
-     0.02s 0.0029%   100%      0.02s 0.0029%  runtime.nextslicecap (inline)
-     0.02s 0.0029%   100%      0.02s 0.0029%  runtime.pcvalue
-         0     0%   100%      0.02s 0.0029%  runtime.sysFree
-         0     0%   100%      0.02s 0.0029%  runtime.sysFreeOS (inline)
-         0     0%   100%      0.02s 0.0029%  runtime.traceAdvance.func1
-         0     0%   100%      0.02s 0.0029%  runtime.traceLocker.startPC
-     0.02s 0.0029%   100%      0.02s 0.0029%  runtime.traceNextGen (inline)
-         0     0%   100%      0.02s 0.0029%  runtime.traceWriter.writeGoStatus
-     0.01s 0.0014%   100%      0.02s 0.0029%  runtime/pprof.(*profileBuilder).addCPUData
-     0.01s 0.0014%   100%      0.01s 0.0014%  indexbytebody
-     0.01s 0.0014%   100%      0.01s 0.0014%  internal/runtime/atomic.(*Uint32).Add (inline)
-         0     0%   100%      0.01s 0.0014%  runtime.(*Frames).Next
-     0.01s 0.0014%   100%      0.01s 0.0014%  runtime.(*activeSweep).begin (inline)
-         0     0%   100%      0.01s 0.0014%  runtime.(*atomicSpanSetSpinePointer).Load (inline)
-     0.01s 0.0014%   100%      0.01s 0.0014%  runtime.(*bucket).bp
-         0     0%   100%      0.01s 0.0014%  runtime.(*consistentHeapStats).release
-     0.01s 0.0014%   100%      0.01s 0.0014%  runtime.(*fixalloc).alloc
-     0.01s 0.0014%   100%      0.01s 0.0014%  runtime.(*gList).pop (inline)
-         0     0%   100%      0.01s 0.0014%  runtime.(*gcWork).put
-         0     0%   100%      0.01s 0.0014%  runtime.(*inlineUnwinder).resolveInternal (inline)
-     0.01s 0.0014%   100%      0.01s 0.0014%  runtime.(*lfstack).pop (inline)
-     0.01s 0.0014%   100%      0.01s 0.0014%  runtime.(*lfstack).push
-         0     0%   100%      0.01s 0.0014%  runtime.(*lockTimer).end
-     0.01s 0.0014%   100%      0.01s 0.0014%  runtime.(*m).hasCgoOnStack (inline)
-     0.01s 0.0014%   100%      0.01s 0.0014%  runtime.(*mcentral).partialUnswept (inline)
-         0     0%   100%      0.01s 0.0014%  runtime.(*mheap).nextSpanForSweep
-     0.01s 0.0014%   100%      0.01s 0.0014%  runtime.(*mspan).heapBitsSmallForAddr
-         0     0%   100%      0.01s 0.0014%  runtime.(*mspan).typePointersOfUnchecked
-     0.01s 0.0014%   100%      0.01s 0.0014%  runtime.(*profBuf).read
-     0.01s 0.0014%   100%      0.01s 0.0014%  runtime.(*timer).stop
-         0     0%   100%      0.01s 0.0014%  runtime.GC
-         0     0%   100%      0.01s 0.0014%  runtime.ReadTrace
-         0     0%   100%      0.01s 0.0014%  runtime.blockevent
-         0     0%   100%      0.01s 0.0014%  runtime.chanrecv
-         0     0%   100%      0.01s 0.0014%  runtime.chanrecv1
-     0.01s 0.0014%   100%      0.01s 0.0014%  runtime.checkTimersNoP
-         0     0%   100%      0.01s 0.0014%  runtime.deductSweepCredit
-         0     0%   100%      0.01s 0.0014%  runtime.dumpStacksRec
-         0     0%   100%      0.01s 0.0014%  runtime.entersyscall
-     0.01s 0.0014%   100%      0.01s 0.0014%  runtime.findfunc
-         0     0%   100%      0.01s 0.0014%  runtime.forEachPInternal
-         0     0%   100%      0.01s 0.0014%  runtime.fpTracebackPartialExpand
-         0     0%   100%      0.01s 0.0014%  runtime.funcline1
-     0.01s 0.0014%   100%      0.01s 0.0014%  runtime.gcBgMarkWorker.func1
-         0     0%   100%      0.01s 0.0014%  runtime.mProf_Malloc
-         0     0%   100%      0.01s 0.0014%  runtime.makeTraceFrames
-         0     0%   100%      0.01s 0.0014%  runtime.malg
-         0     0%   100%      0.01s 0.0014%  runtime.malg.func1
-     0.01s 0.0014%   100%      0.01s 0.0014%  runtime.markroot
-     0.01s 0.0014%   100%      0.01s 0.0014%  runtime.mutexWaitListHead (inline)
-         0     0%   100%      0.01s 0.0014%  runtime.newInlineUnwinder
-     0.01s 0.0014%   100%      0.01s 0.0014%  runtime.newMarkBits
-         0     0%   100%      0.01s 0.0014%  runtime.pcdatavalue1
-         0     0%   100%      0.01s 0.0014%  runtime.preemptall
-     0.01s 0.0014%   100%      0.01s 0.0014%  runtime.procyield
-         0     0%   100%      0.01s 0.0014%  runtime.profilealloc
-     0.01s 0.0014%   100%      0.01s 0.0014%  runtime.pthread_mutex_lock
-         0     0%   100%      0.01s 0.0014%  runtime.putempty
-     0.01s 0.0014%   100%      0.01s 0.0014%  runtime.reentersyscall
-         0     0%   100%      0.01s 0.0014%  runtime.releasep
-     0.01s 0.0014%   100%      0.01s 0.0014%  runtime.saveAncestors
-         0     0%   100%      0.01s 0.0014%  runtime.saveblockevent
-     0.01s 0.0014%   100%      0.01s 0.0014%  runtime.startPCForTrace
-         0     0%   100%      0.01s 0.0014%  runtime.startTheWorld.func1
-     0.01s 0.0014%   100%      0.01s 0.0014%  runtime.suspendG
-         0     0%   100%      0.01s 0.0014%  runtime.traceAdvance.forEachP.func7
-         0     0%   100%      0.01s 0.0014%  runtime.traceAdvance.func1.1
-         0     0%   100%      0.01s 0.0014%  runtime.traceAdvance.func3
-         0     0%   100%      0.01s 0.0014%  runtime.traceLocker.Gomaxprocs
-         0     0%   100%      0.01s 0.0014%  runtime.traceLocker.ProcStop
-     0.01s 0.0014%   100%      0.01s 0.0014%  runtime.tracefpunwindoff (inline)
-     0.01s 0.0014%   100%      0.01s 0.0014%  runtime/pprof.(*profMap).lookup
+     0.02s 0.011% 0.011%    107.14s 58.00%  testing.(*B).RunParallel.func1
+     0.05s 0.027% 0.038%    106.51s 57.66%  github.com/AlexsanderHamir/GenPool/pool_test.BenchmarkSyncPool.func2
+    14.13s  7.65%  7.69%    106.21s 57.50%  github.com/AlexsanderHamir/GenPool/pool_test.highLatencyWorkload
+     4.99s  2.70% 10.39%     90.80s 49.16%  math/rand/v2.N[go.shape.uint8] (inline)
+    26.35s 14.27% 24.65%     85.77s 46.43%  math/rand/v2.(*Rand).uint64n
+    23.66s 12.81% 37.46%     59.29s 32.10%  math/rand/v2.(*Rand).Uint64 (inline)
+    48.34s 26.17% 63.63%     48.34s 26.17%  internal/chacha8rand.block
+     2.87s  1.55% 65.19%     35.53s 19.24%  math/rand/v2.runtimeSource.Uint64
+    13.66s  7.40% 72.58%     32.66s 17.68%  runtime.rand
+     0.01s 0.0054% 72.59%     17.80s  9.64%  runtime.systemstack
+     0.03s 0.016% 72.61%     15.45s  8.36%  runtime.(*mheap).allocSpan
+    14.86s  8.05% 80.65%     14.86s  8.05%  runtime.madvise
+         0     0% 80.65%     14.70s  7.96%  runtime.sysUsed (inline)
+         0     0% 80.65%     14.70s  7.96%  runtime.sysUsedOS (inline)
+         0     0% 80.65%     14.46s  7.83%  runtime.(*mheap).alloc.func1
+    13.83s  7.49% 88.14%     13.83s  7.49%  internal/chacha8rand.(*State).Next (inline)
+     0.01s 0.0054% 88.14%      9.40s  5.09%  runtime.mcall
+     0.02s 0.011% 88.15%      9.20s  4.98%  runtime.schedule
+     0.06s 0.032% 88.19%      8.16s  4.42%  runtime.findRunnable
+     7.62s  4.13% 92.31%      7.62s  4.13%  runtime.usleep
+     0.01s 0.0054% 92.32%      7.49s  4.06%  runtime.park_m
+     0.07s 0.038% 92.36%      5.59s  3.03%  runtime.lock2
+         0     0% 92.36%      5.59s  3.03%  runtime.lockWithRank (inline)
+         0     0% 92.36%      5.39s  2.92%  runtime.lock (partial-inline)
+     4.38s  2.37% 94.73%      5.17s  2.80%  internal/chacha8rand.(*State).Refill
+         0     0% 94.73%      5.12s  2.77%  runtime.osyield (inline)
+         0     0% 94.73%      3.34s  1.81%  runtime.newstack
+         0     0% 94.73%      3.23s  1.75%  runtime.morestack
+     0.03s 0.016% 94.74%      2.64s  1.43%  runtime.stealWork
+         0     0% 94.74%      2.50s  1.35%  runtime.runqgrab
+         0     0% 94.74%      2.50s  1.35%  runtime.runqsteal
+         0     0% 94.74%      2.24s  1.21%  runtime.goschedImpl
+         0     0% 94.74%      2.12s  1.15%  runtime.gopreempt_m (inline)
+         0     0% 94.74%      1.93s  1.04%  runtime.semasleep
+     1.91s  1.03% 95.78%      1.91s  1.03%  runtime.pthread_cond_wait
+     0.04s 0.022% 95.80%      1.89s  1.02%  runtime.wakep
+         0     0% 95.80%      1.78s  0.96%  runtime.goexit0
+     0.03s 0.016% 95.82%      1.66s   0.9%  runtime.(*timers).check
+         0     0% 95.82%      1.64s  0.89%  runtime.gcBgMarkWorker.func2
+     0.02s 0.011% 95.83%      1.64s  0.89%  runtime.gcDrain
+         0     0% 95.83%      1.58s  0.86%  runtime.preemptM
+     1.58s  0.86% 96.68%      1.58s  0.86%  runtime.pthread_kill
+         0     0% 96.68%      1.58s  0.86%  runtime.signalM (inline)
+         0     0% 96.68%      1.54s  0.83%  runtime.stopm
+         0     0% 96.68%      1.51s  0.82%  runtime.mPark (inline)
+         0     0% 96.68%      1.51s  0.82%  runtime.notesleep
+         0     0% 96.68%      1.43s  0.77%  runtime.gcDrainMarkWorkerDedicated (inline)
+     0.02s 0.011% 96.69%      1.39s  0.75%  runtime.(*timers).run
+     0.08s 0.043% 96.74%      1.35s  0.73%  runtime.(*timer).unlockAndRun
+     0.03s 0.016% 96.75%      1.20s  0.65%  runtime.markroot
+         0     0% 96.75%      1.20s  0.65%  runtime.semawakeup
+         0     0% 96.75%      1.18s  0.64%  runtime.(*mheap).allocManual
+     1.18s  0.64% 97.39%      1.18s  0.64%  runtime.pthread_cond_signal
+         0     0% 97.39%      1.16s  0.63%  runtime.markroot.func1
+         0     0% 97.39%      1.15s  0.62%  runtime.copystack
+         0     0% 97.39%      1.15s  0.62%  runtime.stackalloc
+         0     0% 97.39%      1.15s  0.62%  runtime.stackcacherefill
+     0.01s 0.0054% 97.40%      1.12s  0.61%  runtime.mallocgc
+     0.01s 0.0054% 97.40%      1.12s  0.61%  runtime.stackpoolalloc
+         0     0% 97.40%      1.06s  0.57%  runtime.notewakeup
+     0.07s 0.038% 97.44%      1.05s  0.57%  runtime.ready
+         0     0% 97.44%      1.05s  0.57%  runtime.startm
+     0.99s  0.54% 97.98%      0.99s  0.54%  runtime.kevent
+         0     0% 97.98%      0.98s  0.53%  runtime.goready (inline)
+     0.02s 0.011% 97.99%      0.98s  0.53%  runtime.goroutineReady
+         0     0% 97.99%      0.98s  0.53%  runtime.netpoll
+     0.01s 0.0054% 97.99%      0.96s  0.52%  runtime.goroutineReady.goready.func1
+         0     0% 97.99%      0.87s  0.47%  runtime.preemptone
+     0.03s 0.016% 98.01%      0.83s  0.45%  runtime.growslice
+         0     0% 98.01%      0.82s  0.44%  runtime.resetspinning
+         0     0% 98.01%      0.79s  0.43%  runtime.newobject
+         0     0% 98.01%      0.75s  0.41%  runtime.deductAssistCredit
+         0     0% 98.01%      0.75s  0.41%  runtime.gcAssistAlloc
+         0     0% 98.01%      0.73s   0.4%  runtime.suspendG
+         0     0% 98.01%      0.56s   0.3%  runtime.gcBgMarkWorker
+         0     0% 98.01%      0.49s  0.27%  runtime.runSafePointFn
+         0     0% 98.01%      0.47s  0.25%  runtime.preemptall
+     0.02s 0.011% 98.02%      0.43s  0.23%  runtime.scanstack
+         0     0% 98.02%      0.42s  0.23%  runtime.gcAssistAlloc.func2
+         0     0% 98.02%      0.42s  0.23%  runtime.gcAssistAlloc1
+         0     0% 98.02%      0.41s  0.22%  runtime.gcstopm
+         0     0% 98.02%      0.40s  0.22%  runtime.(*gcControllerState).enlistWorker
+     0.19s   0.1% 98.12%      0.40s  0.22%  time.Sleep
+     0.01s 0.0054% 98.13%      0.37s   0.2%  runtime.gcDrainN
+     0.12s 0.065% 98.19%      0.36s  0.19%  runtime.scanobject
+         0     0% 98.19%      0.35s  0.19%  runtime.gcMarkDone
+     0.35s  0.19% 98.38%      0.35s  0.19%  runtime.memclrNoHeapPointers
+         0     0% 98.38%      0.32s  0.17%  runtime.(*gcWork).balance
+         0     0% 98.38%      0.31s  0.17%  runtime.(*sweepLocked).sweep.(*mheap).freeSpan.func2
+     0.30s  0.16% 98.54%      0.30s  0.16%  runtime.asyncPreempt
+     0.01s 0.0054% 98.55%      0.30s  0.16%  runtime.forEachPInternal
+         0     0% 98.55%      0.29s  0.16%  runtime.semacquire (inline)
+     0.05s 0.027% 98.58%      0.29s  0.16%  runtime.semacquire1
+         0     0% 98.58%      0.28s  0.15%  runtime.gcMarkDone.forEachP.func5
+     0.03s 0.016% 98.59%      0.28s  0.15%  runtime.scanframeworker
+     0.01s 0.0054% 98.60%      0.27s  0.15%  runtime.nanotime (inline)
+         0     0% 98.60%      0.26s  0.14%  runtime.mallocgcSmallNoscan
+     0.24s  0.13% 98.73%      0.26s  0.14%  runtime.nanotime1
+         0     0% 98.73%      0.25s  0.14%  runtime.(*mcache).nextFree
+         0     0% 98.73%      0.24s  0.13%  runtime.(*mcache).refill
+         0     0% 98.73%      0.21s  0.11%  runtime.(*mcentral).cacheSpan
+         0     0% 98.73%      0.21s  0.11%  runtime.(*timer).updateHeap
+     0.01s 0.0054% 98.73%      0.21s  0.11%  runtime.(*timers).deleteMin
+     0.12s 0.065% 98.80%      0.21s  0.11%  runtime.casgstatus
+         0     0% 98.80%      0.21s  0.11%  runtime.gcDrainMarkWorkerIdle (inline)
+         0     0% 98.80%      0.21s  0.11%  runtime.newproc.func1
+         0     0% 98.80%      0.20s  0.11%  runtime.gcStart.func2
+         0     0% 98.80%      0.20s  0.11%  runtime.stopTheWorldWithSema
+         0     0% 98.80%      0.19s   0.1%  runtime.(*mheap).reclaim
+         0     0% 98.80%      0.19s   0.1%  runtime.unlock (partial-inline)
+     0.04s 0.022% 98.82%      0.19s   0.1%  runtime.unlock2
+         0     0% 98.82%      0.19s   0.1%  runtime.unlockWithRank (inline)
+     0.15s 0.081% 98.90%      0.18s 0.097%  runtime.(*timers).siftDown
+     0.03s 0.016% 98.92%      0.18s 0.097%  runtime.execute
+     0.14s 0.076% 98.99%      0.18s 0.097%  runtime.gopark
+     0.07s 0.038% 99.03%      0.18s 0.097%  runtime.wbBufFlush1
+     0.08s 0.043% 99.07%      0.17s 0.092%  runtime.greyobject
+         0     0% 99.07%      0.16s 0.087%  runtime.(*pageAlloc).scavenge.func1
+         0     0% 99.07%      0.16s 0.087%  runtime.(*pageAlloc).scavengeOne
+     0.03s 0.016% 99.09%      0.16s 0.087%  runtime.scanblock
+         0     0% 99.09%      0.16s 0.087%  runtime.sysUnused (inline)
+         0     0% 99.09%      0.16s 0.087%  runtime.sysUnusedOS (inline)
+         0     0% 99.09%      0.15s 0.081%  runtime.wbBufFlush
+         0     0% 99.09%      0.15s 0.081%  runtime.wbBufFlush.func1
+     0.01s 0.0054% 99.10%      0.15s 0.081%  sync.(*Pool).Get
+         0     0% 99.10%      0.14s 0.076%  github.com/AlexsanderHamir/GenPool/pool_test.BenchmarkSyncPool.func1
+         0     0% 99.10%      0.14s 0.076%  github.com/AlexsanderHamir/GenPool/pool_test.allocator (inline)
+     0.14s 0.076% 99.17%      0.14s 0.076%  runtime.memmove
+         0     0% 99.17%      0.14s 0.076%  runtime.unlock2Wake
+     0.01s 0.0054% 99.18%      0.13s  0.07%  runtime.(*mcentral).grow
+     0.08s 0.043% 99.22%      0.13s  0.07%  runtime.findObject
+         0     0% 99.22%      0.12s 0.065%  runtime.(*timers).lock (inline)
+         0     0% 99.22%      0.12s 0.065%  runtime.gosched_m
+     0.03s 0.016% 99.24%      0.11s  0.06%  gcWriteBarrier
+         0     0% 99.24%      0.11s  0.06%  runtime.(*mheap).alloc
+         0     0% 99.24%      0.11s  0.06%  runtime.gcParkAssist
+     0.01s 0.0054% 99.24%      0.11s  0.06%  runtime.getempty
+     0.01s 0.0054% 99.25%      0.10s 0.054%  runtime.(*sweepLocked).sweep
+         0     0% 99.25%      0.10s 0.054%  runtime.gdestroy
+     0.01s 0.0054% 99.25%      0.10s 0.054%  runtime.newproc1
+         0     0% 99.25%      0.09s 0.049%  runtime.(*gcWork).put
+         0     0% 99.25%      0.09s 0.049%  runtime.(*timer).modify
+         0     0% 99.25%      0.09s 0.049%  runtime.(*timer).reset (inline)
+         0     0% 99.25%      0.09s 0.049%  runtime.gfput
+     0.01s 0.0054% 99.26%      0.09s 0.049%  runtime.mallocgcSmallScanNoHeader
+         0     0% 99.26%      0.09s 0.049%  runtime.readyWithTime.goready.func1
+         0     0% 99.26%      0.09s 0.049%  runtime.resetForSleep
+         0     0% 99.26%      0.07s 0.038%  github.com/AlexsanderHamir/GenPool/pool_test.BenchmarkSyncPool
+         0     0% 99.26%      0.07s 0.038%  runtime.(*stkframe).getStackMap
+         0     0% 99.26%      0.07s 0.038%  runtime.(*timer).maybeAdd
+     0.05s 0.027% 99.29%      0.07s 0.038%  runtime.(*unwinder).resolveInternal
+         0     0% 99.29%      0.07s 0.038%  runtime.getempty.func1
+         0     0% 99.29%      0.07s 0.038%  runtime.semrelease (inline)
+     0.01s 0.0054% 99.29%      0.07s 0.038%  runtime.semrelease1
+     0.05s 0.027% 99.32%      0.07s 0.038%  runtime.traceAcquire (inline)
+     0.04s 0.022% 99.34%      0.07s 0.038%  sync.(*Pool).Put
+         0     0% 99.34%      0.07s 0.038%  testing.(*B).RunParallel
+         0     0% 99.34%      0.07s 0.038%  testing.(*B).runN
+         0     0% 99.34%      0.06s 0.032%  runtime.(*mheap).reclaimChunk
+         0     0% 99.34%      0.06s 0.032%  runtime.(*unwinder).init (inline)
+         0     0% 99.34%      0.06s 0.032%  runtime.(*unwinder).initAt
+     0.04s 0.022% 99.36%      0.06s 0.032%  runtime.findfunc
+         0     0% 99.36%      0.06s 0.032%  runtime.newproc
+     0.05s 0.027% 99.39%      0.06s 0.032%  runtime.pcvalue
+         0     0% 99.39%      0.06s 0.032%  runtime.preemptPark
+         0     0% 99.39%      0.06s 0.032%  runtime.sweepone
+         0     0% 99.39%      0.06s 0.032%  testing.(*B).launch
+         0     0% 99.39%      0.05s 0.027%  runtime.(*mheap).freeSpan (inline)
+         0     0% 99.39%      0.05s 0.027%  runtime.(*stackScanState).putPtr
+         0     0% 99.39%      0.05s 0.027%  runtime.(*unwinder).next
+     0.01s 0.0054% 99.39%      0.05s 0.027%  runtime.gfget
+     0.02s 0.011% 99.40%      0.05s 0.027%  runtime.globrunqget
+     0.05s 0.027% 99.43%      0.05s 0.027%  runtime.runqput
+     0.04s 0.022% 99.45%      0.04s 0.022%  internal/runtime/atomic.(*Uint32).CompareAndSwap (inline)
+     0.04s 0.022% 99.47%      0.04s 0.022%  runtime.(*mspan).base (inline)
+         0     0% 99.47%      0.04s 0.022%  runtime.deductSweepCredit
+         0     0% 99.47%      0.04s 0.022%  runtime.gcMarkDone.func1
+         0     0% 99.47%      0.04s 0.022%  runtime.gfget.func2
+         0     0% 99.47%      0.04s 0.022%  runtime.handoff
+         0     0% 99.47%      0.04s 0.022%  runtime.pcdatavalue
+     0.04s 0.022% 99.50%      0.04s 0.022%  runtime.typePointers.next
+     0.03s 0.016% 99.51%      0.03s 0.016%  internal/runtime/atomic.(*Uint8).Load (inline)
+     0.01s 0.0054% 99.52%      0.03s 0.016%  runtime.(*gcControllerState).findRunnableGCWorker
+         0     0% 99.52%      0.03s 0.016%  runtime.(*gcWork).putBatch
+     0.01s 0.0054% 99.52%      0.03s 0.016%  runtime.(*mheap).allocMSpanLocked
+     0.01s 0.0054% 99.53%      0.03s 0.016%  runtime.(*mspan).typePointersOfUnchecked
+     0.01s 0.0054% 99.53%      0.03s 0.016%  runtime.(*stackScanState).addObject
+         0     0% 99.53%      0.03s 0.016%  runtime.(*timer).unlock (inline)
+     0.03s 0.016% 99.55%      0.03s 0.016%  runtime.(*timers).cleanHead
+         0     0% 99.55%      0.03s 0.016%  runtime.gcStart
+     0.02s 0.011% 99.56%      0.03s 0.016%  runtime.heapSetTypeNoHeader (inline)
+         0     0% 99.56%      0.03s 0.016%  runtime.isSystemGoroutine
+         0     0% 99.56%      0.03s 0.016%  runtime.parkunlock_c
+     0.03s 0.016% 99.58%      0.03s 0.016%  runtime.readgstatus (inline)
+     0.01s 0.0054% 99.58%      0.03s 0.016%  runtime.readyWithTime
+     0.03s 0.016% 99.60%      0.03s 0.016%  runtime.releasem (inline)
+         0     0% 99.60%      0.03s 0.016%  runtime.stackcacherelease
+         0     0% 99.60%      0.03s 0.016%  runtime.stackfree
+     0.03s 0.016% 99.62%      0.03s 0.016%  testing.(*PB).Next (inline)
+     0.02s 0.011% 99.63%      0.02s 0.011%  internal/runtime/atomic.(*Int64).Add (inline)
+     0.02s 0.011% 99.64%      0.02s 0.011%  internal/runtime/atomic.(*Uint64).Add (inline)
+     0.02s 0.011% 99.65%      0.02s 0.011%  runtime.(*activeSweep).end
+     0.01s 0.0054% 99.65%      0.02s 0.011%  runtime.(*consistentHeapStats).release
+     0.01s 0.0054% 99.66%      0.02s 0.011%  runtime.(*fixalloc).alloc
+     0.01s 0.0054% 99.66%      0.02s 0.011%  runtime.(*gcControllerState).update
+     0.02s 0.011% 99.68%      0.02s 0.011%  runtime.(*lfstack).pop (inline)
+     0.01s 0.0054% 99.68%      0.02s 0.011%  runtime.(*moduledata).funcName
+     0.02s 0.011% 99.69%      0.02s 0.011%  runtime.(*mspan).heapBitsSmallForAddr
+     0.02s 0.011% 99.70%      0.02s 0.011%  runtime.(*mspan).nextFreeIndex
+     0.02s 0.011% 99.71%      0.02s 0.011%  runtime.(*stkframe).argMapInternal
+     0.02s 0.011% 99.72%      0.02s 0.011%  runtime.(*timer).needsAdd (inline)
+     0.01s 0.0054% 99.73%      0.02s 0.011%  runtime.(*timers).unlock (inline)
+         0     0% 99.73%      0.02s 0.011%  runtime.acquireSudog
+         0     0% 99.73%      0.02s 0.011%  runtime.bgsweep
+     0.02s 0.011% 99.74%      0.02s 0.011%  runtime.findmoduledatap (inline)
+         0     0% 99.74%      0.02s 0.011%  runtime.funcname (inline)
+         0     0% 99.74%      0.02s 0.011%  runtime.funcspdelta (inline)
+         0     0% 99.74%      0.02s 0.011%  runtime.gcFlushBgCredit
+         0     0% 99.74%      0.02s 0.011%  runtime.gcMarkTermination.forEachP.func6
+     0.02s 0.011% 99.75%      0.02s 0.011%  runtime.libcCall
+         0     0% 99.75%      0.02s 0.011%  runtime.notetsleep
+         0     0% 99.75%      0.02s 0.011%  runtime.notetsleep_internal
+     0.02s 0.011% 99.76%      0.02s 0.011%  runtime.procyield
+     0.02s 0.011% 99.77%      0.02s 0.011%  runtime.pthread_cond_timedwait_relative_np
+     0.01s 0.0054% 99.78%      0.02s 0.011%  runtime.runqget (inline)
+         0     0% 99.78%      0.02s 0.011%  runtime.scanConservative
+     0.02s 0.011% 99.79%      0.02s 0.011%  runtime.spanOf (inline)
+         0     0% 99.79%      0.02s 0.011%  runtime.spanOfHeap
+         0     0% 99.79%      0.02s 0.011%  runtime.startTheWorldWithSema
+     0.01s 0.0054% 99.79%      0.02s 0.011%  runtime.step
+     0.02s 0.011% 99.81%      0.02s 0.011%  runtime.traceEnabled (inline)
+     0.02s 0.011% 99.82%      0.02s 0.011%  sync.(*Pool).pin
+     0.01s 0.0054% 99.82%      0.01s 0.0054%  gogo
+     0.01s 0.0054% 99.83%      0.01s 0.0054%  internal/runtime/atomic.(*Int32).Add (inline)
+     0.01s 0.0054% 99.83%      0.01s 0.0054%  internal/runtime/atomic.(*Uint32).Add (inline)
+     0.01s 0.0054% 99.84%      0.01s 0.0054%  internal/runtime/atomic.(*Uint32).Load (inline)
+     0.01s 0.0054% 99.84%      0.01s 0.0054%  internal/runtime/atomic.(*UnsafePointer).Load (inline)
+         0     0% 99.84%      0.01s 0.0054%  runtime.(*activeSweep).begin (inline)
+     0.01s 0.0054% 99.85%      0.01s 0.0054%  runtime.(*consistentHeapStats).acquire
+         0     0% 99.85%      0.01s 0.0054%  runtime.(*gcCPULimiterState).update
+         0     0% 99.85%      0.01s 0.0054%  runtime.(*gcCPULimiterState).updateLocked
+     0.01s 0.0054% 99.85%      0.01s 0.0054%  runtime.(*gcWork).dispose
+     0.01s 0.0054% 99.86%      0.01s 0.0054%  runtime.(*guintptr).cas (inline)
+     0.01s 0.0054% 99.86%      0.01s 0.0054%  runtime.(*limiterEvent).consume
+     0.01s 0.0054% 99.87%      0.01s 0.0054%  runtime.(*mLockProfile).recordUnlock
+         0     0% 99.87%      0.01s 0.0054%  runtime.(*mSpanStateBox).get (inline)
+         0     0% 99.87%      0.01s 0.0054%  runtime.(*mcache).prepareForSweep
+         0     0% 99.87%      0.01s 0.0054%  runtime.(*mcache).releaseAll
+         0     0% 99.87%      0.01s 0.0054%  runtime.(*mheap).grow
+         0     0% 99.87%      0.01s 0.0054%  runtime.(*mheap).nextSpanForSweep
+     0.01s 0.0054% 99.88%      0.01s 0.0054%  runtime.(*moduledata).textAddr
+         0     0% 99.88%      0.01s 0.0054%  runtime.(*mspan).initHeapBits
+     0.01s 0.0054% 99.88%      0.01s 0.0054%  runtime.(*mspan).markBitsForIndex (inline)
+         0     0% 99.88%      0.01s 0.0054%  runtime.(*mspan).writeHeapBitsSmall
+         0     0% 99.88%      0.01s 0.0054%  runtime.(*pageAlloc).alloc
+         0     0% 99.88%      0.01s 0.0054%  runtime.(*pageAlloc).allocRange
+     0.01s 0.0054% 99.89%      0.01s 0.0054%  runtime.(*pageAlloc).allocToCache
+         0     0% 99.89%      0.01s 0.0054%  runtime.(*pageAlloc).update
+     0.01s 0.0054% 99.89%      0.01s 0.0054%  runtime.(*pallocBits).summarize
+         0     0% 99.89%      0.01s 0.0054%  runtime.(*scavengerState).init.func1
+         0     0% 99.89%      0.01s 0.0054%  runtime.(*scavengerState).wake
+         0     0% 99.89%      0.01s 0.0054%  runtime.(*semaRoot).dequeue
+     0.01s 0.0054% 99.90%      0.01s 0.0054%  runtime.(*semaRoot).queue
+     0.01s 0.0054% 99.90%      0.01s 0.0054%  runtime.(*spanSet).pop
+     0.01s 0.0054% 99.91%      0.01s 0.0054%  runtime.(*stackScanState).getPtr
+     0.01s 0.0054% 99.91%      0.01s 0.0054%  runtime.(*sweepLocker).tryAcquire
+     0.01s 0.0054% 99.92%      0.01s 0.0054%  runtime.(*timeHistogram).record
+         0     0% 99.92%      0.01s 0.0054%  runtime.acquirep
+         0     0% 99.92%      0.01s 0.0054%  runtime.adjustctxt
+         0     0% 99.92%      0.01s 0.0054%  runtime.adjustframe
+     0.01s 0.0054% 99.92%      0.01s 0.0054%  runtime.adjustpointer (inline)
+         0     0% 99.92%      0.01s 0.0054%  runtime.casGToWaiting (inline)
+         0     0% 99.92%      0.01s 0.0054%  runtime.casGToWaitingForGC
+     0.01s 0.0054% 99.93%      0.01s 0.0054%  runtime.findnull
+     0.01s 0.0054% 99.94%      0.01s 0.0054%  runtime.forEachG
+         0     0% 99.94%      0.01s 0.0054%  runtime.forEachP (inline)
+         0     0% 99.94%      0.01s 0.0054%  runtime.freeStackSpans
+         0     0% 99.94%      0.01s 0.0054%  runtime.funcInfo.entry (inline)
+         0     0% 99.94%      0.01s 0.0054%  runtime.funcMaxSPDelta
+         0     0% 99.94%      0.01s 0.0054%  runtime.gcMarkTermination.func3
+         0     0% 99.94%      0.01s 0.0054%  runtime.gcResetMarkState
+         0     0% 99.94%      0.01s 0.0054%  runtime.gcStart.func4
+         0     0% 99.94%      0.01s 0.0054%  runtime.goparkunlock (inline)
+         0     0% 99.94%      0.01s 0.0054%  runtime.gostringnocopy (inline)
+         0     0% 99.94%      0.01s 0.0054%  runtime.injectglist
+         0     0% 99.94%      0.01s 0.0054%  runtime.injectglist.func1
+         0     0% 99.94%      0.01s 0.0054%  runtime.mProf_Malloc
+         0     0% 99.94%      0.01s 0.0054%  runtime.malg
+         0     0% 99.94%      0.01s 0.0054%  runtime.mallocgcTiny
+     0.01s 0.0054% 99.94%      0.01s 0.0054%  runtime.markBits.isMarked (inline)
+     0.01s 0.0054% 99.95%      0.01s 0.0054%  runtime.mmap
+         0     0% 99.95%      0.01s 0.0054%  runtime.netpollBreak (inline)
+         0     0% 99.95%      0.01s 0.0054%  runtime.newMarkBits
+     0.01s 0.0054%   100%      0.01s 0.0054%  runtime.pidleget
+         0     0%   100%      0.01s 0.0054%  runtime.pidlegetSpinning
+         0     0%   100%      0.01s 0.0054%  runtime.profilealloc
+     0.01s 0.0054%   100%      0.01s 0.0054%  runtime.pthread_mutex_lock
+     0.01s 0.0054%   100%      0.01s 0.0054%  runtime.pthread_mutex_unlock
+     0.01s 0.0054%   100%      0.01s 0.0054%  runtime.puintptr.ptr (inline)
+     0.01s 0.0054%   100%      0.01s 0.0054%  runtime.readUintptr (inline)
+     0.01s 0.0054%   100%      0.01s 0.0054%  runtime.readvarint (inline)
+     0.01s 0.0054%   100%      0.01s 0.0054%  runtime.recordspan
+         0     0%   100%      0.01s 0.0054%  runtime.releasep
+     0.01s 0.0054%   100%      0.01s 0.0054%  runtime.releasepNoTrace
+         0     0%   100%      0.01s 0.0054%  runtime.shrinkstack
+     0.01s 0.0054%   100%      0.01s 0.0054%  runtime.stackpoolfree
+         0     0%   100%      0.01s 0.0054%  runtime.stkbucket
+         0     0%   100%      0.01s 0.0054%  runtime.sysMap
+         0     0%   100%      0.01s 0.0054%  runtime.sysMapOS
+     0.01s 0.0054%   100%      0.01s 0.0054%  runtime.typePointers.nextFast (inline)
+         0     0%   100%      0.01s 0.0054%  runtime.wakeNetPoller
+         0     0%   100%      0.01s 0.0054%  runtime.wakeNetpoll
+         0     0%   100%      0.01s 0.0054%  testing.(*B).run1.func1
