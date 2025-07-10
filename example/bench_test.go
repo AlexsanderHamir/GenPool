@@ -71,6 +71,8 @@ func createPool() *pool.ShardedPool[Object, *Object] {
 func BenchmarkGenPoolHeavy(b *testing.B) {
 	p := createPool()
 
+	defer p.Close()
+
 	var wg sync.WaitGroup
 	const (
 		numGoroutines = 100
