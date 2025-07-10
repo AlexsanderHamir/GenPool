@@ -22,26 +22,35 @@ var (
 // Different levels for clean up configuration.
 // These presets control how aggressively GenPool reclaims memory.
 // Note: Go's GC may still run unless you explicitly suppress it via debug.SetGCPercent(-1)
+type GcLevel string
+
 var (
 	// GcDisable disables GenPool's cleanup completely.
 	// Objects will stay in the pool indefinitely unless manually cleared.
-	GcDisable = "disable"
+	GcDisable GcLevel = "disable"
 
 	// GcLow performs cleanup at long intervals with minimal aggression.
 	// Good for low-latency, high-reuse scenarios.
-	GcLow = "low"
+	GcLow GcLevel = "low"
 
 	// GcModerate performs cleanup at regular intervals and evicts objects
 	// that are lightly used. Balances reuse and memory usage.
-	GcModerate = "moderate"
+	GcModerate GcLevel = "moderate"
 
 	// GcAggressive enables frequent cleanup and removes objects
 	// that are not reused often. Best for memory-constrained environments.
-	GcAggressive = "aggressive"
+	GcAggressive GcLevel = "aggressive"
 )
 
-// numShards attempts to get the approximate number of shards that is fitting for your CPU.
-// It will not work well if you start with 2 logical cores and gradually move to 64.
+// numShards determines how many shards the pool will use based on available CPU resources.
+// It uses GOMAXPROCS(0) to detect how many logical CPUs the Go scheduler is using.
+// The number is clamped between 8 and 128 to avoid poor performance due to under- or over-sharding.
+//
+// NOTE: This value is computed once at startup.
+// If your application starts with a small CPU quota (e.g., 2 cores in a container)
+// and later scales up to a higher CPU count (e.g., 64 cores),
+// numShards will NOT automatically adjust. This could lead to suboptimal performance
+// because the pool may not fully utilize the additional cores.
 var numShards = min(max(runtime.GOMAXPROCS(0), 8), 128)
 
 // CleanupPolicy defines how the pool should clean up unused objects.
@@ -54,29 +63,28 @@ type CleanupPolicy struct {
 	MinUsageCount int64
 }
 
-// DefaultCleanupPolicy returns a default cleanup configuration.
-// Levels: "disabled", "low", "moderate", "aggressive"
-func DefaultCleanupPolicy(level string) CleanupPolicy {
+// DefaultCleanupPolicy returns a default cleanup configuration based on specified level.
+func DefaultCleanupPolicy(level GcLevel) CleanupPolicy {
 	switch level {
-	case "disabled":
+	case GcDisable:
 		return CleanupPolicy{
 			Enabled:       false,
 			Interval:      0,
 			MinUsageCount: 0,
 		}
-	case "low":
+	case GcLow:
 		return CleanupPolicy{
 			Enabled:       true,
 			Interval:      10 * time.Minute,
 			MinUsageCount: 1,
 		}
-	case "moderate":
+	case GcModerate:
 		return CleanupPolicy{
 			Enabled:       true,
 			Interval:      2 * time.Minute,
 			MinUsageCount: 2,
 		}
-	case "aggressive":
+	case GcAggressive:
 		return CleanupPolicy{
 			Enabled:       true,
 			Interval:      30 * time.Second,
