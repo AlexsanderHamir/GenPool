@@ -1,5 +1,6 @@
-// Package alternative is for anybody that doesn't like the intrusive style here's an alternative,
-// feel free to improve it and benchmark it to see if it matches your desired performance for your use case.
+// Package alternative is here as an example, it currently performs much worse than GenPool and sync.Pool
+// so it was decide to not make this public, but if anybody can optimize this enough, It will be made
+// available for everybody.
 package alternative
 
 import (
