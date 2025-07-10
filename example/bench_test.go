@@ -27,9 +27,10 @@ func cleaner(obj *Object) {
 	obj.Name = ""
 	obj.Data = obj.Data[:0]
 
-	// or simply fo this, look at the link below for any doubts:
+	// or simply do this:
+	// *obj = Object{}
+	// look at the link below for any doubts:
 	// https://www.reddit.com/r/golang/comments/1lvjmar/comment/n2ekhq5
-	*obj = Object{}
 
 }
 
