@@ -23,8 +23,14 @@ func allocator() *Object {
 }
 
 func cleaner(obj *Object) {
+	// manual
 	obj.Name = ""
 	obj.Data = obj.Data[:0]
+
+	// or simply fo this, look at the link below for any doubts:
+	// https://www.reddit.com/r/golang/comments/1lvjmar/comment/n2ekhq5
+	*obj = Object{}
+
 }
 
 func createPool() *pool.ShardedPool[Object, *Object] {
@@ -46,7 +52,6 @@ func createPool() *pool.ShardedPool[Object, *Object] {
 
 func BenchmarkGenPoolHeavy(b *testing.B) {
 	p := createPool()
-
 	defer p.Close()
 
 	var wg sync.WaitGroup
