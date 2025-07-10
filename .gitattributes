@@ -11,5 +11,5 @@ example/ export-ignore
 LICENSE export-ignore
 
 pool/*_test.go export-ignore
-pool/alternative/* -text
-
+pool/alternative/*.txt export-ignore
+go.work
