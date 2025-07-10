@@ -19,6 +19,27 @@ var (
 	ErrNoCleaner = errors.New("no cleaner configured")
 )
 
+// Different levels for clean up configuration.
+// These presets control how aggressively GenPool reclaims memory.
+// Note: Go's GC may still run unless you explicitly suppress it via debug.SetGCPercent(-1)
+var (
+	// GcDisable disables GenPool's cleanup completely.
+	// Objects will stay in the pool indefinitely unless manually cleared.
+	GcDisable = "disable"
+
+	// GcLow performs cleanup at long intervals with minimal aggression.
+	// Good for low-latency, high-reuse scenarios.
+	GcLow = "low"
+
+	// GcModerate performs cleanup at regular intervals and evicts objects
+	// that are lightly used. Balances reuse and memory usage.
+	GcModerate = "moderate"
+
+	// GcAggressive enables frequent cleanup and removes objects
+	// that are not reused often. Best for memory-constrained environments.
+	GcAggressive = "aggressive"
+)
+
 // numShards attempts to get the approximate number of shards that is fitting for your CPU.
 // It will not work well if you start with 2 logical cores and gradually move to 64.
 var numShards = min(max(runtime.GOMAXPROCS(0), 8), 128)
@@ -34,11 +55,40 @@ type CleanupPolicy struct {
 }
 
 // DefaultCleanupPolicy returns a default cleanup configuration.
-func DefaultCleanupPolicy() CleanupPolicy {
-	return CleanupPolicy{
-		Enabled:       false,
-		Interval:      5 * time.Minute,
-		MinUsageCount: 1,
+// Levels: "disabled", "low", "moderate", "aggressive"
+func DefaultCleanupPolicy(level string) CleanupPolicy {
+	switch level {
+	case "disabled":
+		return CleanupPolicy{
+			Enabled:       false,
+			Interval:      0,
+			MinUsageCount: 0,
+		}
+	case "low":
+		return CleanupPolicy{
+			Enabled:       true,
+			Interval:      10 * time.Minute,
+			MinUsageCount: 1,
+		}
+	case "moderate":
+		return CleanupPolicy{
+			Enabled:       true,
+			Interval:      2 * time.Minute,
+			MinUsageCount: 2,
+		}
+	case "aggressive":
+		return CleanupPolicy{
+			Enabled:       true,
+			Interval:      30 * time.Second,
+			MinUsageCount: 3,
+		}
+	default:
+		// Fallback to moderate if unrecognized
+		return CleanupPolicy{
+			Enabled:       true,
+			Interval:      2 * time.Minute,
+			MinUsageCount: 2,
+		}
 	}
 }
 
@@ -76,7 +126,7 @@ type PoolConfig[T any, P Poolable[T]] struct {
 // DefaultConfig returns a default pool configuration for type T.
 func DefaultConfig[T any, P Poolable[T]](allocator Allocator[T], cleaner Cleaner[T]) PoolConfig[T, P] {
 	return PoolConfig[T, P]{
-		Cleanup:   DefaultCleanupPolicy(),
+		Cleanup:   DefaultCleanupPolicy(GcModerate),
 		Allocator: allocator,
 		Cleaner:   cleaner,
 	}
