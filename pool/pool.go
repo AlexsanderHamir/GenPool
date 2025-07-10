@@ -59,7 +59,7 @@ type CleanupPolicy struct {
 	Enabled bool
 	// Interval is how often the cleanup should run
 	Interval time.Duration
-	// MinUsageCount is the number of usage below which an object will be evicted
+	// MinUsageCount is the number of usage BELOW which an object will be evicted
 	MinUsageCount int64
 }
 
@@ -143,7 +143,7 @@ func DefaultConfig[T any, P Poolable[T]](allocator Allocator[T], cleaner Cleaner
 // PoolShard represents a single shard in the pool.
 type PoolShard[T any, P Poolable[T]] struct {
 	// head is the head of the linked list for this shard
-	head atomic.Pointer[T]
+	Head atomic.Pointer[T]
 
 	// pad ensures each shard is on its own cache line
 	_ [64 - unsafe.Sizeof(atomic.Pointer[T]{})%64]byte
@@ -152,7 +152,7 @@ type PoolShard[T any, P Poolable[T]] struct {
 // ShardedPool is the main pool implementation using sharding for better concurrency.
 type ShardedPool[T any, P Poolable[T]] struct {
 	// shards is a slice of pool shards, each on its own cache line
-	shards []*PoolShard[T, P]
+	Shards []*PoolShard[T, P]
 
 	// stopClean signals the cleanup goroutine to stop
 	stopClean chan struct{}
@@ -181,12 +181,12 @@ func NewPoolWithConfig[T any, P Poolable[T]](cfg PoolConfig[T, P]) (*ShardedPool
 	p := &ShardedPool[T, P]{
 		cfg:       cfg,
 		stopClean: make(chan struct{}),
-		shards:    make([]*PoolShard[T, P], numShards),
+		Shards:    make([]*PoolShard[T, P], numShards),
 	}
 
-	for i := range p.shards {
-		p.shards[i] = &PoolShard[T, P]{}
-		p.shards[i].head.Store(nil)
+	for i := range p.Shards {
+		p.Shards[i] = &PoolShard[T, P]{}
+		p.Shards[i].Head.Store(nil)
 	}
 
 	if cfg.Cleanup.Enabled {
@@ -209,7 +209,7 @@ func (p *ShardedPool[T, P]) getShard() *PoolShard[T, P] {
 	id := runtime_procPin()
 	runtime_procUnpin()
 
-	return p.shards[id%numShards] // ensure we don't get "index out of bounds error" if number of P's changes
+	return p.Shards[id%numShards] // ensure we don't get "index out of bounds error" if number of P's changes
 }
 
 // RetrieveOrCreate gets an object from the pool or creates a new one.
@@ -234,9 +234,9 @@ func (p *ShardedPool[T, P]) Put(obj P) {
 	shard := p.getShard()
 
 	for {
-		oldHead := P(shard.head.Load())
+		oldHead := P(shard.Head.Load())
 
-		if shard.head.CompareAndSwap(oldHead, obj) {
+		if shard.Head.CompareAndSwap(oldHead, obj) {
 			obj.SetNext(oldHead)
 			return
 		}
@@ -246,13 +246,13 @@ func (p *ShardedPool[T, P]) Put(obj P) {
 // retrieveFromShard gets an object from a specific shard.
 func (p *ShardedPool[T, P]) retrieveFromShard(shard *PoolShard[T, P]) (zero P, success bool) {
 	for {
-		oldHead := P(shard.head.Load())
+		oldHead := P(shard.Head.Load())
 		if oldHead == nil {
 			return zero, false
 		}
 
 		next := oldHead.GetNext()
-		if shard.head.CompareAndSwap(oldHead, next) {
+		if shard.Head.CompareAndSwap(oldHead, next) {
 			return oldHead, true
 		}
 	}
@@ -260,14 +260,14 @@ func (p *ShardedPool[T, P]) retrieveFromShard(shard *PoolShard[T, P]) (zero P, s
 
 // Clear removes all objects from the pool.
 func (p *ShardedPool[T, P]) clear() {
-	for _, shard := range p.shards {
+	for _, shard := range p.Shards {
 		for {
-			current := P(shard.head.Load())
+			current := P(shard.Head.Load())
 			if current == nil {
 				break
 			}
 
-			if shard.head.CompareAndSwap(current, nil) {
+			if shard.Head.CompareAndSwap(current, nil) {
 				// We have successfully taken the list.
 				// Now iterate and clean it.
 				for current != nil {
@@ -308,19 +308,19 @@ func (p *ShardedPool[T, P]) cleanup() {
 		return
 	}
 
-	for _, shard := range p.shards {
+	for _, shard := range p.Shards {
 		p.cleanupShard(shard)
 	}
 }
 
 func (p *ShardedPool[T, P]) cleanupShard(shard *PoolShard[T, P]) {
 	// Atomically take the entire list from the shard.
-	oldHead := P(shard.head.Load())
+	oldHead := P(shard.Head.Load())
 	if oldHead == nil {
 		return
 	}
 
-	if !shard.head.CompareAndSwap(oldHead, nil) {
+	if !shard.Head.CompareAndSwap(oldHead, nil) {
 		// The list was modified by another goroutine. We'll just skip this cleanup cycle for this shard
 		// and try again on the next tick. This is a simple, low-contention strategy.
 		return
@@ -358,14 +358,14 @@ func (p *ShardedPool[T, P]) cleanupShard(shard *PoolShard[T, P]) {
 
 		// Atomically prepend the list of kept items to the shard's current list.
 		for {
-			currentHead := P(shard.head.Load())
+			currentHead := P(shard.Head.Load())
 			var nextForTail P
 			if currentHead != nil {
 				nextForTail = currentHead
 			}
 			keptTail.SetNext(nextForTail)
 
-			if shard.head.CompareAndSwap(currentHead, keptHead) {
+			if shard.Head.CompareAndSwap(currentHead, keptHead) {
 				break
 			}
 			// Contention: The head of the shard's list was modified. Retry.

@@ -18,6 +18,8 @@ GenPool delivers better performance than sync.Pool in high or unpredictable late
 - [Performance](#performance)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
+- [CleanupPolicy](#cleanup-policy)
+- [Total Manual Control](#total-manual-control)
 - [Contributing](#contributing)
 - [Complete Example](#complete-example)
 - [License](#license)
@@ -47,14 +49,11 @@ GenPool delivers better performance than sync.Pool in high or unpredictable late
 ### Summary
 
 - **GenPool and `sync.Pool` deliver comparable performance across most workloads.**
-- Under **high latency/high concurrency scenarios**, GenPool provides:
-
-  - Approximately **400/600 ns faster** per operation
-  - Around **1.5/2 bytes less memory allocation**
+- Under **high latency/high concurrency scenarios**, GenPool provides approximately **400/600 ns faster** per operation.
 
 ### ⚙️ Performance Tip
 
-For best results under contention, place fields like `usageCount` and `next` on separate cache lines (add padding if needed). This avoids false sharing and improves cache performance across cores. ([example](pool/pool_benchmark_test.go))
+For best results under contention make sure that `pool.PoolFields[Object]` is on a separate cache line from your fields (add padding if needed). This avoids false sharing and improves cache performance across cores. ([example](pool/pool_benchmark_test.go))
 
 ## References
 
@@ -83,12 +82,12 @@ import (
 	"github.com/AlexsanderHamir/GenPool/pool"
 )
 
-// Object implements the Poolable type constraint
-// An atomic linked list is created and sharded (cpu number) out of the objects you want to pool.
+// By embedding [PoolFields], Object automatically satisfies the Poolable interface.
+// Objects are pooled using an atomic, sharded (per CPU) linked list.
 type Object struct {
 	Name       string
 	Data       []byte
-	pool.PoolFields[BenchmarkObject]
+	pool.PoolFields[Object]
 }
 
 func allocator() *Object {
@@ -106,7 +105,7 @@ func main() {
 	cleanupPolicy := pool.CleanupPolicy{
 		Enabled:       true,
 		Interval:      10 * time.Minute,
-		MinUsageCount: 20, // eviction happens up until this number of usage per object
+		MinUsageCount: 20, // eviction happens below this number of usage per object
 	}
 
 	// Create pool with custom configuration
@@ -125,14 +124,83 @@ func main() {
 
 	obj := benchPool.RetrieveOrCreate()
 
-	// Use the object
+
 	obj.Name = "Robert"
 	obj.Data = append(obj.Data, 34)
 
-	// Return the object to the pool
+
 	benchPool.Put(obj)
 }
 ```
+
+## Cleanup Policy
+
+- Each object tracks its usage.
+- At regular intervals, GenPool evaluates and removes objects used less than a configured threshold.
+- Frequently used objects are retained, and their usage count is reset for the next cleanup run.
+
+### 🧩 Configuration
+
+```go
+type CleanupPolicy struct {
+	Enabled       bool
+	Interval      time.Duration
+	MinUsageCount int64
+}
+```
+
+Use `DefaultCleanupPolicy(level)` to get a predefined setup.
+
+### 🎛️ Cleanup Levels
+
+| Level        | Interval | MinUsageCount | When to Use                            |
+| ------------ | -------- | ------------- | -------------------------------------- |
+| `disable`    | —        | —             | Manual control / predictable workloads |
+| `low`        | 10m      | 1             | High reuse, latency-sensitive          |
+| `moderate`   | 2m       | 2             | Balanced default                       |
+| `aggressive` | 30s      | 3             | Low memory tolerance / bursty usage    |
+
+```go
+pool.DefaultCleanupPolicy(pool.GcModerate)
+```
+
+Or define your own:
+
+```go
+pool.CleanupPolicy{
+	Enabled: true,
+	Interval: 5 * time.Minute,
+	MinUsageCount: 5,
+}
+```
+
+> For detailed technical implementation, see the [Cleanup Mechanism documentation](./docs/cleanup.md).
+
+## Total Manual Control
+
+For advanced users who prefer full control over memory reclamation, GenPool allows you to **disable automatic cleanup** using the `GcDisable` policy, and the pool exposes its internal fields to allow for custom logic.
+
+### Public Access for Manual Cleanup
+
+The `ShardedPool` and `PoolShard` types expose the internals you need:
+
+```go
+// PoolShard represents a single shard in the pool.
+type PoolShard[T any, P Poolable[T]] struct {
+	Head atomic.Pointer[T] // Head of the linked list for this shard
+	_    [64 - unsafe.Sizeof(atomic.Pointer[T]{})%64]byte // Cache line padding
+}
+
+// ShardedPool is the main pool implementation using sharding for better concurrency.
+type ShardedPool[T any, P Poolable[T]] struct {
+	Shards    []*PoolShard[T, P] // All shards, publicly accessible
+	stopClean chan struct{}
+	cleanWg   sync.WaitGroup
+	cfg       PoolConfig[T, P]
+}
+```
+
+You can safely traverse and modify these shards to implement your own retention, eviction, or tracking strategies.
 
 ## Contributing
 
