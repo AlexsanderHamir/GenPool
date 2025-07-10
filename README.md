@@ -20,7 +20,7 @@ GenPool delivers better performance than sync.Pool when your system tends to hol
 - [Performance](#performance)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
-- [CleanupPolicy](#cleanup-policy)
+- [Cleanup Levels](#cleanup-levels)
 - [Total Manual Control](#total-manual-control)
 - [Contributing](#contributing)
 - [Complete Example](#complete-example)
@@ -50,13 +50,13 @@ GenPool delivers better performance than sync.Pool when your system tends to hol
 
 ### Summary
 
-- **GenPool** performs better when you hold onto objects for longer periods, especially when you perform more operations on them and face unpredictable latency. However, if you release objects almost immediately, GenPool’s performance tends to be worse.
+- As shown, **GenPool** performs better when objects are held for longer periods. Its performance degrades as retention time decreases, due to the overhead of its sharded design.
 
 ### ⚙️ Performance Tip
 
 For best results under contention make sure that `pool.PoolFields[Object]` is on a separate cache line from your fields (add padding if needed). This avoids false sharing and improves cache performance across cores. ([example](pool/pool_benchmark_test.go))
 
-## References
+### References
 
 For detailed technical explanations and implementation details, please refer to the [docs](./docs) directory:
 
@@ -134,21 +134,7 @@ func main() {
 }
 ```
 
-## Cleanup Policy
-
-- Each object tracks its usage.
-- At regular intervals, GenPool evaluates and removes objects used less than a configured threshold.
-- Frequently used objects are retained, and their usage count is reset for the next cleanup run.
-
-### 🧩 Configuration
-
-```go
-type CleanupPolicy struct {
-	Enabled       bool
-	Interval      time.Duration
-	MinUsageCount int64
-}
-```
+## Cleanup Levels
 
 Use `DefaultCleanupPolicy(level)` to get a predefined setup.
 
@@ -162,20 +148,8 @@ Use `DefaultCleanupPolicy(level)` to get a predefined setup.
 | `aggressive` | 30s      | 3             | Low memory tolerance / bursty usage    |
 
 ```go
-pool.DefaultCleanupPolicy(pool.GcModerate)
+Cleanup: pool.DefaultCleanupPolicy(pool.GcModerate)
 ```
-
-Or define your own:
-
-```go
-pool.CleanupPolicy{
-	Enabled: true,
-	Interval: 5 * time.Minute,
-	MinUsageCount: 5,
-}
-```
-
-> For detailed technical implementation, see the [Cleanup Mechanism documentation](./docs/cleanup.md).
 
 ## Total Manual Control
 
@@ -186,18 +160,12 @@ For advanced users who prefer full control over memory reclamation, GenPool allo
 The `ShardedPool` and `PoolShard` types expose the internals you need:
 
 ```go
-// PoolShard represents a single shard in the pool.
 type PoolShard[T any, P Poolable[T]] struct {
 	Head atomic.Pointer[T] // Head of the linked list for this shard
-	_    [64 - unsafe.Sizeof(atomic.Pointer[T]{})%64]byte // Cache line padding
 }
 
-// ShardedPool is the main pool implementation using sharding for better concurrency.
 type ShardedPool[T any, P Poolable[T]] struct {
-	Shards    []*PoolShard[T, P] // All shards, publicly accessible
-	stopClean chan struct{}
-	cleanWg   sync.WaitGroup
-	cfg       PoolConfig[T, P]
+	Shards    []*PoolShard[T, P] // All shards
 }
 ```
 
