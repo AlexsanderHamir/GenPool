@@ -12,4 +12,4 @@ LICENSE export-ignore
 
 pool/*_test.go export-ignore
 pool/alternative/ export-ignore
-go.work
+go.work export-ignore

@@ -1,6 +1,7 @@
-// Package alternative is here as an example, it currently performs much worse than GenPool and sync.Pool
-// so it was decide to not make this public, but if anybody can optimize this enough, It will be made
-// available for everybody.
+// Package alternative serves as an experimental example.
+// It currently performs significantly worse than GenPool and sync.Pool,
+// so it's not exposed publicly. However, if performance is improved,
+// it may be promoted to a public API in the future.
 package alternative
 
 import (
