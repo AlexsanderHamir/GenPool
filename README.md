@@ -35,21 +35,20 @@ GenPool delivers better performance than sync.Pool in high or unpredictable late
 
 ### Benchmark Results
 
-| Latency Level | Metric         | GenPool   | SyncPool  | Delta Value | Delta %    |
-| ------------- | -------------- | --------- | --------- | ----------- | ---------- |
-| **High**      | Avg Iterations | 92,090    | 85,018    | +7,072      | +8.32%     |
-|               | Avg Time (ns)  | 12,268    | 13,070    | **-802**    | **-6.14%** |
-| **Moderate**  | Avg Iterations | 869,492   | 840,131   | +29,361     | +3.49%     |
-|               | Avg Time (ns)  | 1,223.8   | 1,316.7   | **-92.9**   | **-7.05%** |
-| **Low**       | Avg Iterations | 6,004,695 | 6,099,886 | -95,191     | -1.56%     |
-|               | Avg Time (ns)  | 197.46    | 194.26    | **+3.2**    | **+1.65%** |
+| Latency Level Workload | Metric         | GenPool   | SyncPool  | Delta Value | Delta %    |
+| ---------------------- | -------------- | --------- | --------- | ----------- | ---------- |
+| **High**               | Avg Iterations | 92,090    | 85,018    | +7,072      | +8.32%     |
+|                        | Avg Time (ns)  | 12,268    | 13,070    | **-802**    | **-6.14%** |
+| **Moderate**           | Avg Iterations | 869,492   | 840,131   | +29,361     | +3.49%     |
+|                        | Avg Time (ns)  | 1,223.8   | 1,316.7   | **-92.9**   | **-7.05%** |
+| **Low**                | Avg Iterations | 6,004,695 | 6,099,886 | -95,191     | -1.56%     |
+|                        | Avg Time (ns)  | 197.46    | 194.26    | **+3.2**    | **+1.65%** |
 
 > **Full benchmark details:** [GenPool vs sync.Pool](./benchmark_results_transparency)
 
 ### Summary
 
-- **GenPool and `sync.Pool` deliver comparable performance across most workloads.**
-- Under **high latency/high concurrency scenarios**, GenPool provides approximately **400/600 ns faster** per operation.
+- **GenPool** performs better when you hold onto objects for longer periods, especially when you perform more operations on them and face unpredictable latency. However, if you release objects almost immediately, GenPool’s performance tends to be worse.
 
 ### ⚙️ Performance Tip
 
