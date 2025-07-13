@@ -42,7 +42,7 @@ func TestNewPool(t *testing.T) {
 	})
 }
 
-func TestPoolRetrieveOrCreate(t *testing.T) {
+func TestPoolGet(t *testing.T) {
 	t.Run("with allocator", func(t *testing.T) {
 		p, err := pool.NewPool(testAllocator, testCleaner)
 		if err != nil {
@@ -51,14 +51,14 @@ func TestPoolRetrieveOrCreate(t *testing.T) {
 
 		defer p.Close()
 
-		obj := p.RetrieveOrCreate()
+		obj := p.Get()
 		if obj == nil {
-			t.Error("RetrieveOrCreate() returned nil object")
+			t.Error("Get() returned nil object")
 			return
 		}
 
 		if obj.ID != 1 || obj.Value != "test" {
-			t.Errorf("RetrieveOrCreate() got = %+v, want ID=1, Value=test", obj)
+			t.Errorf("Get() got = %+v, want ID=1, Value=test", obj)
 		}
 	})
 }
@@ -76,9 +76,9 @@ func TestPoolCleanupUsageCount(t *testing.T) {
 
 		defer p.Close()
 
-		obj1 := p.RetrieveOrCreate()
+		obj1 := p.Get()
 		if obj1 == nil {
-			t.Fatal("RetrieveOrCreate() returned nil object")
+			t.Fatal("Get() returned nil object")
 		}
 
 		obj1.IncrementUsage()

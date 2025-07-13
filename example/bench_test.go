@@ -67,7 +67,7 @@ func BenchmarkGenPoolHeavy(b *testing.B) {
 		go func() {
 			defer wg.Done()
 			for j := range iterations {
-				obj := p.RetrieveOrCreate()
+				obj := p.Get()
 				obj.Name = "Worker"
 				obj.Data = append(obj.Data, byte(j%256))
 				p.Put(obj)

@@ -162,6 +162,11 @@ type ShardedPool[T any, P Poolable[T]] struct {
 
 	// cfg holds the pool configuration
 	cfg PoolConfig[T, P]
+
+	// Its used by [GenNCheap()], avoids creating slices.
+	// A channel is only created if GetNCheap is called.
+	// The channel is unbuffered.
+	FastPath chan P
 }
 
 // NewPool creates a new sharded pool with the given configuration.
@@ -212,8 +217,8 @@ func (p *ShardedPool[T, P]) getShard() *PoolShard[T, P] {
 	return p.Shards[id%numShards] // ensure we don't get "index out of bounds error" if number of P's changes
 }
 
-// RetrieveOrCreate gets an object from the pool or creates a new one.
-func (p *ShardedPool[T, P]) RetrieveOrCreate() P {
+// Get gets an object from the pool or creates a new one.
+func (p *ShardedPool[T, P]) Get() P {
 	shard := p.getShard()
 
 	// Try to get an object from the shard
@@ -228,6 +233,31 @@ func (p *ShardedPool[T, P]) RetrieveOrCreate() P {
 	return obj
 }
 
+// GetN returns N objects.
+// This implementation creates memory, don't use it in the hot path,
+// "make" always makes things much slower.
+func (p *ShardedPool[T, P]) GetN(n int) []P {
+	objs := make([]P, n) // WARNING
+	for i := range n {
+		objs[i] = p.Get()
+	}
+
+	return objs
+}
+
+// GetNCheap
+// Same as GetN, but uses a channel instead of creating a new slice
+// every time is called.
+func (p *ShardedPool[T, P]) GetNCheap(n int) {
+	if p.FastPath == nil {
+		p.FastPath = make(chan P)
+	}
+
+	for range n {
+		p.FastPath <- p.Get()
+	}
+}
+
 // Put returns an object to the pool.
 func (p *ShardedPool[T, P]) Put(obj P) {
 	p.cfg.Cleaner(obj)
@@ -240,6 +270,13 @@ func (p *ShardedPool[T, P]) Put(obj P) {
 			obj.SetNext(oldHead)
 			return
 		}
+	}
+}
+
+// PutN returns N objects.
+func (p *ShardedPool[T, P]) PutN(objs []P) {
+	for _, obj := range objs {
+		p.Put(obj)
 	}
 }
 

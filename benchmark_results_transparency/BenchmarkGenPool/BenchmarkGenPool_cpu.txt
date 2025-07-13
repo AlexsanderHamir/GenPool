@@ -88,7 +88,7 @@ Showing nodes accounting for 211.90s, 100% of 211.90s total
          0     0% 98.04%      0.53s  0.25%  runtime.gcstopm
      0.01s 0.0047% 98.04%      0.50s  0.24%  runtime.(*gcWork).balance
      0.49s  0.23% 98.27%      0.49s  0.23%  runtime.asyncPreempt
-     0.04s 0.019% 98.29%      0.48s  0.23%  github.com/AlexsanderHamir/GenPool/pool.(*ShardedPool[go.shape.struct { Name string; Data []uint8; github.com/AlexsanderHamir/GenPool/pool_test._ [24]uint8; PoolFields = github.com/AlexsanderHamir/GenPool/pool.PoolFields[github.com/AlexsanderHamir/GenPool/pool_test.BenchmarkObject] },go.shape.*github.com/AlexsanderHamir/GenPool/pool_test.BenchmarkObject]).RetrieveOrCreate
+     0.04s 0.019% 98.29%      0.48s  0.23%  github.com/AlexsanderHamir/GenPool/pool.(*ShardedPool[go.shape.struct { Name string; Data []uint8; github.com/AlexsanderHamir/GenPool/pool_test._ [24]uint8; PoolFields = github.com/AlexsanderHamir/GenPool/pool.PoolFields[github.com/AlexsanderHamir/GenPool/pool_test.BenchmarkObject] },go.shape.*github.com/AlexsanderHamir/GenPool/pool_test.BenchmarkObject]).Get
          0     0% 98.29%      0.48s  0.23%  runtime.runSafePointFn
      0.14s 0.066% 98.36%      0.43s   0.2%  runtime.scanobject
          0     0% 98.36%      0.41s  0.19%  runtime.(*timers).lock (inline)

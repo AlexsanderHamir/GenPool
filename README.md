@@ -123,7 +123,7 @@ func main() {
 
 	defer benchPool.Close()
 
-	obj := benchPool.RetrieveOrCreate()
+	obj := benchPool.Get()
 
 
 	obj.Name = "Robert"

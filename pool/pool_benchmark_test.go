@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/GenPool/pool"
-	"github.com/AlexsanderHamir/GenPool/pool/alternative"
 )
 
 // BenchmarkObject is a simple struct we'll use for benchmarking.
@@ -83,9 +82,9 @@ func BenchmarkGenPool(b *testing.B) {
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			obj := p.RetrieveOrCreate()
+			obj := p.Get()
 
-			highLatencyWorkload(obj)
+			lowLatencyWorkload(obj)
 
 			p.Put(obj)
 		}
@@ -105,7 +104,7 @@ func BenchmarkSyncPool(b *testing.B) {
 		for pb.Next() {
 			obj := p.Get().(*BenchmarkObject)
 
-			highLatencyWorkload(obj)
+			lowLatencyWorkload(obj)
 
 			obj.Name = ""
 			obj.Data = obj.Data[:0]
@@ -188,72 +187,13 @@ func benchmarkPoolWithConfig(b *testing.B, cfg pool.PoolConfig[BenchmarkObject, 
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			obj := p.RetrieveOrCreate()
+			obj := p.Get()
 
 			if obj == nil {
 				b.Fatal("obj is nil")
 			}
 
 			highLatencyWorkload(obj)
-
-			p.Put(obj)
-		}
-	})
-}
-
-type Object struct {
-	Name string
-	Data []byte
-}
-
-var allocator2 = func() *Object {
-	return &Object{
-		Name: "",
-		Data: make([]byte, 0, 1024), // Pre-allocate capacity
-	}
-}
-
-var cleaner2 = func(obj *Object) {
-	obj.Name = ""
-	obj.Data = obj.Data[:0] // Reset slice but keep capacity
-}
-
-// never repeat yourself kids.
-func performWorkload2(obj *Object) {
-	obj.Name = "test"
-
-	// Simulate CPU-intensive work
-	for range 1000 {
-		obj.Data = append(obj.Data, rand.N[byte](255))
-	}
-
-	// Simulate some I/O or network delay
-	time.Sleep(time.Microsecond * 10)
-}
-
-func BenchmarkGenPoolAlternative(b *testing.B) {
-	cfg := alternative.PoolConfig[Object]{
-		Allocator: allocator2,
-		Cleaner:   cleaner2,
-	}
-
-	p, err := alternative.NewPoolWithConfig(cfg)
-	if err != nil {
-		b.Fatalf("error creating pool: %v", err)
-	}
-
-	defer p.Close()
-
-	b.ResetTimer()
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			obj := p.RetrieveOrCreate()
-
-			if obj == nil {
-				b.Fatal("obj is nil")
-			}
-
-			performWorkload2(obj)
 
 			p.Put(obj)
 		}

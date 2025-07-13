@@ -10,7 +10,7 @@ Showing nodes accounting for 5820MB, 100% of 5820MB total
          0     0% 98.71%       35MB   0.6%  github.com/AlexsanderHamir/GenPool/pool_test.BenchmarkGenPool
       35MB   0.6% 99.32%       35MB   0.6%  testing.(*B).RunParallel
          0     0% 99.32%    24.50MB  0.42%  testing.(*B).launch
-         0     0% 99.32%       17MB  0.29%  github.com/AlexsanderHamir/GenPool/pool.(*ShardedPool[go.shape.struct { Name string; Data []uint8; github.com/AlexsanderHamir/GenPool/pool_test._ [24]uint8; PoolFields = github.com/AlexsanderHamir/GenPool/pool.PoolFields[github.com/AlexsanderHamir/GenPool/pool_test.BenchmarkObject] },go.shape.*github.com/AlexsanderHamir/GenPool/pool_test.BenchmarkObject]).RetrieveOrCreate
+         0     0% 99.32%       17MB  0.29%  github.com/AlexsanderHamir/GenPool/pool.(*ShardedPool[go.shape.struct { Name string; Data []uint8; github.com/AlexsanderHamir/GenPool/pool_test._ [24]uint8; PoolFields = github.com/AlexsanderHamir/GenPool/pool.PoolFields[github.com/AlexsanderHamir/GenPool/pool_test.BenchmarkObject] },go.shape.*github.com/AlexsanderHamir/GenPool/pool_test.BenchmarkObject]).Get
       17MB  0.29% 99.61%       17MB  0.29%  github.com/AlexsanderHamir/GenPool/pool_test.allocator
    12.50MB  0.21% 99.82%    12.50MB  0.21%  time.Sleep
          0     0% 99.82%    10.50MB  0.18%  testing.(*B).run1.func1

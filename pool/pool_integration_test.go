@@ -83,10 +83,10 @@ func TestPoolStress(t *testing.T) {
 				case <-ctx.Done():
 					return
 				default:
-					obj := p.RetrieveOrCreate()
+					obj := p.Get()
 					if obj == nil {
 						errorsMu.Lock()
-						errors = append(errors, fmt.Errorf("goroutine %d: RetrieveOrCreate returned nil", id))
+						errors = append(errors, fmt.Errorf("goroutine %d: Get returned nil", id))
 						errorsMu.Unlock()
 						continue
 					}
@@ -124,7 +124,7 @@ func TestPoolObjectLifecycle(t *testing.T) {
 	defer p.Close()
 
 	// Test object creation and initial state
-	obj := p.RetrieveOrCreate()
+	obj := p.Get()
 	if !obj.IsValid {
 		t.Error("New object should be valid")
 	}
@@ -136,7 +136,7 @@ func TestPoolObjectLifecycle(t *testing.T) {
 	// Test object reuse
 	p.Put(obj)
 
-	obj2 := p.RetrieveOrCreate()
+	obj2 := p.Get()
 	if obj2 != obj {
 		t.Error("Expected to get the same object back")
 	}
@@ -237,7 +237,7 @@ func TestPoolObjectReuse(t *testing.T) {
 	const iterations = 100
 
 	for range iterations {
-		obj := p.RetrieveOrCreate()
+		obj := p.Get()
 		objects[obj]++
 		p.Put(obj)
 	}
