@@ -53,16 +53,6 @@ var (
 // because the pool may not fully utilize the additional cores.
 var numShards = min(max(runtime.GOMAXPROCS(0), 8), 128)
 
-// ForceShardCount sets the number of shards to the given value.
-//
-// Use with caution: this overrides the default shard count logic, which is
-// based on GOMAXPROCS. Internally, runtime_procPin is used to pin goroutines
-// to specific logical processors, so ensure that your override value makes
-// sense for the number of logical CPUs available on your system.
-func ForceShardCount(n int) {
-	numShards = n
-}
-
 // CleanupPolicy defines how the pool should clean up unused objects.
 type CleanupPolicy struct {
 	// Enabled determines if automatic cleanup is enabled
@@ -139,6 +129,9 @@ type PoolConfig[T any, P Poolable[T]] struct {
 	Allocator Allocator[T]
 	// Cleaner is the function to clean objects before returning them to the pool
 	Cleaner Cleaner[T]
+
+	// ShardNumOverride allows you to change [numShards] if its necessary for your use case
+	ShardNumOverride int
 }
 
 // DefaultConfig returns a default pool configuration for type T.
@@ -197,6 +190,7 @@ func NewPoolWithConfig[T any, P Poolable[T]](cfg PoolConfig[T, P]) (*ShardedPool
 		cfg:       cfg,
 		stopClean: make(chan struct{}),
 		Shards:    make([]*PoolShard[T, P], numShards),
+		FastPath:  make(chan P, 1),
 	}
 
 	for i := range p.Shards {
@@ -259,10 +253,6 @@ func (p *ShardedPool[T, P]) GetN(n int) []P {
 // Same as GetN, but uses a channel instead of creating a new slice
 // every time is called.
 func (p *ShardedPool[T, P]) GetNCheap(n int) {
-	if p.FastPath == nil {
-		p.FastPath = make(chan P)
-	}
-
 	for range n {
 		p.FastPath <- p.Get()
 	}
