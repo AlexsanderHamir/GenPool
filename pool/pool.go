@@ -129,7 +129,6 @@ type PoolConfig[T any, P Poolable[T]] struct {
 	Allocator Allocator[T]
 	// Cleaner is the function to clean objects before returning them to the pool
 	Cleaner Cleaner[T]
-
 	// ShardNumOverride allows you to change [numShards] if its necessary for your use case
 	ShardNumOverride int
 }
@@ -166,9 +165,8 @@ type ShardedPool[T any, P Poolable[T]] struct {
 	// cfg holds the pool configuration
 	cfg PoolConfig[T, P]
 
-	// Its used by [GenNCheap()], avoids creating slices.
+	// Its used by [GenNCheap], avoids creating slices.
 	// A channel is only created if GetNCheap is called.
-	// The channel is unbuffered.
 	FastPath chan P
 }
 
@@ -249,8 +247,7 @@ func (p *ShardedPool[T, P]) GetN(n int) []P {
 	return objs
 }
 
-// GetNCheap
-// Same as GetN, but uses a channel instead of creating a new slice
+// GetNCheap its the same as GetN, but uses a channel instead of creating a new slice
 // every time is called.
 func (p *ShardedPool[T, P]) GetNCheap(n int) {
 	for range n {
