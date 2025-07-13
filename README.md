@@ -202,7 +202,7 @@ go test -bench=. ./...
 
 ## Complete Example
 
-For a fully working example with its own Go module, see the [example](./example) directory.
+For a fully working example with its own Go module, see the [example](./code_example) directory.
 
 ## License
 
