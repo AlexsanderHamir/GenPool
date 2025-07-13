@@ -410,6 +410,7 @@ func (p *ShardedPool[T, P]) cleanupShard(shard *PoolShard[T, P]) {
 // Close stops the cleanup goroutine and clears the pool.
 func (p *ShardedPool[T, P]) Close() {
 	if p.cfg.Cleanup.Enabled {
+		close(p.FastPath)
 		close(p.stopClean)
 		p.cleanWg.Wait()
 		p.clear()
