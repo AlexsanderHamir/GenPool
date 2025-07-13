@@ -192,10 +192,13 @@ go test -bench=. ./...
 
 ### Development Guidelines
 
-- Write tests for new functionality
-- Run benchmarks to ensure no performance regressions
-- Update documentation for user-facing changes
-- Ensure all tests pass before submitting PRs
+1. Run benchmarks before anything to stablish a baseline
+2. Ensure any new functionality didn't regress the performance
+3. Write tests for new functionality
+4. Update documentation for user-facing changes
+5. Ensure all tests pass before submitting PRs
+
+> The best improvement is to do less!!!
 
 ## Complete Example
 
