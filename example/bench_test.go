@@ -30,8 +30,7 @@ func cleaner(obj *Object) {
 	// or simply do this:
 	// *obj = Object{}
 	// look at the link below for any doubts:
-	// https://www.reddit.com/r/golang/comments/1lvjmar/comment/n2ekhq5
-
+	// https://www.reddit.com/r/golang/comments/1lvjmar/comment/n2lgith
 }
 
 func createPool() *pool.ShardedPool[Object, *Object] {
