@@ -1,4 +1,4 @@
-package main
+package memoryallocation
 
 type MyStruct struct {
 	A, B, C int
@@ -15,7 +15,7 @@ func resetStruct(ptr *MyStruct) {
 	*ptr = MyStruct{} // Does this create temporary memory?
 }
 
-func main() {
+func Run() {
 	var x MyStruct
 	x.A = 1 // Initialize memory
 	resetStruct(&x)
