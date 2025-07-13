@@ -94,6 +94,7 @@ func allocator() *Object {
 	return &Object{Name: "test"}
 }
 
+// Used internally by PUT
 func cleaner(obj *Object) {
 	obj.Name = ""
 	obj.Data = obj.Data[:0]
