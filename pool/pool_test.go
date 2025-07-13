@@ -68,6 +68,7 @@ func TestPoolCleanupUsageCount(t *testing.T) {
 		cfg := pool.DefaultConfig(testAllocator, testCleaner)
 		cfg.Cleanup.Enabled = true
 		cfg.Cleanup.Interval = 100 * time.Millisecond
+		cfg.Cleanup.MinUsageCount = 2
 
 		p, err := pool.NewPoolWithConfig(cfg)
 		if err != nil {
@@ -86,6 +87,7 @@ func TestPoolCleanupUsageCount(t *testing.T) {
 
 		p.Put(obj1)
 
+		// Should clean in two passes.
 		time.Sleep(1 * time.Second)
 
 		if obj1.GetUsageCount() != 0 {
