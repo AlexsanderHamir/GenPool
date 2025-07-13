@@ -53,6 +53,16 @@ var (
 // because the pool may not fully utilize the additional cores.
 var numShards = min(max(runtime.GOMAXPROCS(0), 8), 128)
 
+// ForceShardCount sets the number of shards to the given value.
+//
+// Use with caution: this overrides the default shard count logic, which is
+// based on GOMAXPROCS. Internally, runtime_procPin is used to pin goroutines
+// to specific logical processors, so ensure that your override value makes
+// sense for the number of logical CPUs available on your system.
+func ForceShardCount(n int) {
+	numShards = n
+}
+
 // CleanupPolicy defines how the pool should clean up unused objects.
 type CleanupPolicy struct {
 	// Enabled determines if automatic cleanup is enabled
