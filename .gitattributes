@@ -11,5 +11,5 @@ code_example/ export-ignore
 LICENSE export-ignore
 
 pool/*_test.go export-ignore
-pool/technical_discussions/ export ignore
+pool/technical_discussions/ export-ignore
 go.work export-ignore
