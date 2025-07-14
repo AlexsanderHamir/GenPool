@@ -1,6 +1,6 @@
 # GenPool
 
-GenPool delivers better performance than sync.Pool when your system tends to hold onto objects longer—that is, under moderate to high latency workloads—while giving you precise control over when and how aggressively memory is reclaimed.
+GenPool outperforms sync.Pool in scenarios where objects are retained longer and concurrency is medium to high, while also giving you fine-grained control over memory reclamation timing and aggressiveness.
 
 > If your system rarely retains objects and has low concurrency, you’re unlikely to benefit from GenPool’s design.
 
@@ -98,6 +98,9 @@ func allocator() *Object {
 func cleaner(obj *Object) {
 	obj.Name = ""
 	obj.Data = obj.Data[:0]
+
+	// or
+	// *obj = Object{}
 }
 
 func main() {
