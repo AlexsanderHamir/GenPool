@@ -1,4 +1,4 @@
-package pool_test
+package test
 
 import (
 	"math/rand/v2"
