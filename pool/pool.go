@@ -198,9 +198,6 @@ type ShardedPool[T any, P Poolable[T]] struct {
 
 	// cfg holds the pool configuration
 	cfg Config[T, P]
-
-	// Its used by [GenNCheap], avoids creating slices.
-	FastPath chan P
 }
 
 // NewPool creates a new sharded pool with the given configuration.
@@ -218,7 +215,6 @@ func NewPoolWithConfig[T any, P Poolable[T]](cfg Config[T, P]) (*ShardedPool[T, 
 		cfg:       cfg,
 		stopClean: make(chan struct{}),
 		Shards:    make([]*Shard[T, P], getShardCount(cfg)),
-		FastPath:  make(chan P, 1),
 	}
 
 	initShards(pool)
@@ -304,14 +300,6 @@ func (p *ShardedPool[T, P]) GetN(n int) []P {
 	}
 
 	return objs
-}
-
-// GetNCheap its the same as GetN, but uses a channel instead of creating a new slice
-// every time is called.
-func (p *ShardedPool[T, P]) GetNCheap(n int) {
-	for range n {
-		p.FastPath <- p.Get()
-	}
 }
 
 // Put returns an object to the pool.
@@ -475,7 +463,6 @@ func (p *ShardedPool[T, P]) reinsertKeptObjects(shard *Shard[T, P], keptHead, ke
 // Close stops the cleanup goroutine and clears the pool.
 func (p *ShardedPool[T, P]) Close() {
 	if p.cfg.Cleanup.Enabled {
-		close(p.FastPath)
 		close(p.stopClean)
 		p.cleanWg.Wait()
 		p.clear()
