@@ -1,7 +1,6 @@
 package test
 
 import (
-	"math/rand/v2"
 	"sync"
 	"testing"
 	"time"
@@ -12,35 +11,38 @@ import (
 // BenchmarkObject is a simple struct we'll use for benchmarking.
 type BenchmarkObject struct {
 	// user fields
-	Name string   // 16 bytes
-	Data []byte   // 24 bytes
-	_    [24]byte // 24 bytes = 64 bytes
+	Name   string   // 16 bytes (pointer + length)
+	Data   []byte   // 24 bytes (pointer + len + cap)
+	Result int64    // 8 bytes - store computation result
+	_      [16]byte // 16 bytes padding = 64 bytes total
 
 	pool.Fields[BenchmarkObject]
 }
 
-func highLatencyWorkload(obj *BenchmarkObject) {
-	obj.Name = "test"
+func cpuIntensiveWorkload(obj *BenchmarkObject) {
+	obj.Name = "cpu_test"
 
-	// Simulate heavy CPU work
-	for range 10_000 {
-		obj.Data = append(obj.Data, rand.N[byte](255))
+	// Heavier CPU work
+	var result int64
+	for i := range 50_000 {
+		result += int64(i * i * i)
+		result ^= int64(i << 3)
+		if i%1000 == 0 {
+			result = result*31 + int64(i)
+		}
 	}
+	obj.Result = result
 
-	// Simulate high I/O or network delay
-	time.Sleep(10 * time.Millisecond)
-}
-
-func lowLatencyWorkload(obj *BenchmarkObject) {
-	obj.Name = "test"
-
-	// Simulate light CPU work
-	for range 100 {
-		obj.Data = append(obj.Data, rand.N[byte](255))
+	// Minimal allocation - just set a small data payload
+	if cap(obj.Data) < 100 {
+		obj.Data = make([]byte, 0, 100)
 	}
+	obj.Data = obj.Data[:0]
 
-	// Simulate minimal delay
-	time.Sleep(5 * time.Microsecond)
+	// Add some derived data
+	for i := range 100 {
+		obj.Data = append(obj.Data, byte(result>>uint(i%8)))
+	}
 }
 
 // Helper functions for benchmarks.
@@ -72,7 +74,7 @@ func BenchmarkGenPool(b *testing.B) {
 		for pb.Next() {
 			obj := p.Get()
 
-			lowLatencyWorkload(obj)
+			cpuIntensiveWorkload(obj)
 
 			p.Put(obj)
 		}
@@ -92,7 +94,7 @@ func BenchmarkSyncPool(b *testing.B) {
 		for pb.Next() {
 			obj := p.Get().(*BenchmarkObject)
 
-			lowLatencyWorkload(obj)
+			cpuIntensiveWorkload(obj)
 
 			obj.Name = ""
 			obj.Data = obj.Data[:0]
@@ -181,7 +183,7 @@ func benchmarkPoolWithConfig(b *testing.B, cfg pool.Config[BenchmarkObject, *Ben
 				b.Fatal("obj is nil")
 			}
 
-			highLatencyWorkload(obj)
+			cpuIntensiveWorkload(obj)
 
 			p.Put(obj)
 		}
