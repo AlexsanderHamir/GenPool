@@ -160,15 +160,16 @@ For advanced users who prefer full control over memory reclamation, GenPool allo
 
 ### Public Access for Manual Cleanup
 
-The `ShardedPool` and `PoolShard` types expose the internals you need:
+The `ShardedPool` and `Shard` types expose the internals you need:
 
 ```go
-type Shard[T any, P Poolable[T]] struct {
-	Head atomic.Pointer[T] // Head of the linked list for this shard
-}
 
 type ShardedPool[T any, P Poolable[T]] struct {
-	Shards    []*PoolShard[T, P] // All shards
+	Shards    []*Shard[T, P] // All shards
+}
+
+type Shard[T any, P Poolable[T]] struct {
+		Head atomic.Pointer[T] // Head of the linked list for this shard
 }
 ```
 
@@ -196,11 +197,12 @@ go test -bench=. ./...
 
 ### Development Guidelines
 
-1. Run benchmarks before anything to stablish a baseline
-2. Ensure any new functionality didn't regress the performance
-3. Write tests for new functionality
-4. Update documentation for user-facing changes
-5. Ensure all tests pass before submitting PRs
+1. Run benchmarks before anything to stablish a baseline.
+2. Ensure any new functionality didn't regress the performance.
+3. Write unit and black box tests for new functionality.
+4. Update documentation for user-facing changes.
+5. Ensure all tests pass before submitting PRs.
+6. PRs will only be merged if it passed all required github actions.
 
 > The best improvement is to do less!!!
 
