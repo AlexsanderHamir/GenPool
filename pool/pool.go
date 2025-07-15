@@ -255,7 +255,8 @@ func validateCleanupConfig[T any, P Poolable[T]](cfg Config[T, P]) error {
 
 func getShardCount[T any, P Poolable[T]](cfg Config[T, P]) int {
 	if cfg.ShardNumOverride > 0 {
-		return cfg.ShardNumOverride
+		numShards = cfg.ShardNumOverride
+		return numShards
 	}
 	return numShards
 }
