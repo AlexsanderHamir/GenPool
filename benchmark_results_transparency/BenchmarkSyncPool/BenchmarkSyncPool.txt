@@ -2,7 +2,9 @@ goos: darwin
 goarch: arm64
 pkg: github.com/AlexsanderHamir/GenPool/pool
 cpu: Apple M1
+======
 NOTE: b/op and allocs is coming from the benchmark workload function not from the library
+======
 BenchmarkSyncPool-8   	   94450	     12680 ns/op	    1259 B/op	       0 allocs/op
 BenchmarkSyncPool-8   	   95970	     12462 ns/op	    1685 B/op	       0 allocs/op
 BenchmarkSyncPool-8   	   96440	     12546 ns/op	    1192 B/op	       0 allocs/op
