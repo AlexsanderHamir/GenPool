@@ -1,22 +1,25 @@
+// Package memoryallocation refers to a technical discussion had on Reddit, where it was clarified that the syntax MyStruct{}
+// by itself does not allocate memory. When used as *ptr = MyStruct{}, it compiles down to zero instructions in assembly.
 package memoryallocation
 
-type MyStruct struct {
+type myStruct struct {
 	A, B, C int
 }
 
 //go:noinline
-func resetStruct(ptr *MyStruct) {
+func resetStruct(ptr *myStruct) {
 	// Ensure the struct has data before resetting
 	ptr.A = 42
 	ptr.B = 100
 	ptr.C = -1
 
 	// The key line we're testing
-	*ptr = MyStruct{} // Does this create temporary memory?
+	*ptr = myStruct{} // Does this create temporary memory?
 }
 
-func Run() {
-	var x MyStruct
+// RunExample runs the code from the technical discussion.
+func RunExample() {
+	var x myStruct
 	x.A = 1 // Initialize memory
 	resetStruct(&x)
 }

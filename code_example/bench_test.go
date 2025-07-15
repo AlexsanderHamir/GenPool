@@ -12,7 +12,7 @@ type Object struct {
 	Name string
 	Data []byte
 
-	pool.PoolFields[Object]
+	pool.Fields[Object]
 }
 
 func allocator() *Object {
@@ -34,7 +34,7 @@ func cleaner(obj *Object) {
 }
 
 func createPool() *pool.ShardedPool[Object, *Object] {
-	config := pool.PoolConfig[Object, *Object]{
+	config := pool.Config[Object, *Object]{
 		Allocator: allocator,
 		Cleaner:   cleaner,
 		Cleanup: pool.CleanupPolicy{

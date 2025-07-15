@@ -1,0 +1,31 @@
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  enable:
+    - errcheck
+    - revive
+    - govet
+    - gocritic
+    - gocyclo
+    - unused
+
+linters-settings:
+  gocritic:
+    enable-all: true
+  gocyclo:
+    min-complexity: 7
+  revive:
+    rules:
+      - name: var-naming
+      - name: indent-error-flow
+      - name: exported
+      - name: error-naming
+      - name: error-return
+      - name: atomic
+      - name: bare-return
+      - name: bool-literal-in-expr
+
+issues:
+  exclude-use-default: false

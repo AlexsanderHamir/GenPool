@@ -82,12 +82,12 @@ import (
 	"github.com/AlexsanderHamir/GenPool/pool"
 )
 
-// By embedding [PoolFields], Object automatically satisfies the Poolable interface.
+// By embedding [Fields], Object automatically satisfies the Poolable interface.
 // Objects are pooled using an atomic, sharded (per CPU) linked list.
 type Object struct {
 	Name       string
 	Data       []byte
-	pool.PoolFields[Object]
+	pool.Fields[Object]
 }
 
 func allocator() *Object {
@@ -113,7 +113,7 @@ func main() {
 	}
 
 	// Create pool with custom configuration
-	config := pool.PoolConfig[Object, *Object]{
+	config := pool.Config[Object, *Object]{
 		Cleanup:   cleanupPolicy,
 		Allocator: allocator,
 		Cleaner:   cleaner,
@@ -163,7 +163,7 @@ For advanced users who prefer full control over memory reclamation, GenPool allo
 The `ShardedPool` and `PoolShard` types expose the internals you need:
 
 ```go
-type PoolShard[T any, P Poolable[T]] struct {
+type Shard[T any, P Poolable[T]] struct {
 	Head atomic.Pointer[T] // Head of the linked list for this shard
 }
 

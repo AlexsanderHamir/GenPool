@@ -12,7 +12,7 @@ type TestObject struct {
 	ID    int
 	Value string
 
-	pool.PoolFields[TestObject]
+	pool.Fields[TestObject]
 }
 
 // testAllocator creates a new TestObject for the pool.

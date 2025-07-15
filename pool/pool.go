@@ -1,3 +1,6 @@
+// Package pool creates a pool of your objects without additional wrapping and shards the linked list
+// based on the number of available logical CPUs. This design improves performance under
+// high concurrency and when there is significant work done between getting and returning objects.
 package pool
 
 import (
@@ -19,7 +22,7 @@ var (
 	ErrNoCleaner = errors.New("no cleaner configured")
 )
 
-// Different levels for clean up configuration.
+// GcLevel offers different levels for clean up configuration.
 // These presets control how aggressively GenPool reclaims memory.
 // Note: Go's GC may still run unless you explicitly suppress it via debug.SetGCPercent(-1)
 type GcLevel string
@@ -68,9 +71,7 @@ func DefaultCleanupPolicy(level GcLevel) CleanupPolicy {
 	switch level {
 	case GcDisable:
 		return CleanupPolicy{
-			Enabled:       false,
-			Interval:      0,
-			MinUsageCount: 0,
+			Enabled: false,
 		}
 	case GcLow:
 		return CleanupPolicy{
@@ -121,35 +122,41 @@ type Poolable[T any] interface {
 	ResetUsage()
 }
 
-// PoolFields provides intrusive fields and logic for a poolable object.
-// This struct can be embedded in user types.
-type PoolFields[T any] struct {
+// Fields provides intrusive fields and logic for poolable objects.
+// By embedding this struct in your types, you avoid having to implement
+// pooling logic separately for each pool.
+type Fields[T any] struct {
 	usageCount atomic.Int64
 	next       atomic.Pointer[T]
 }
 
-func (p *PoolFields[T]) GetNext() *T {
+// GetNext implements interface function
+func (p *Fields[T]) GetNext() *T {
 	return p.next.Load()
 }
 
-func (p *PoolFields[T]) SetNext(n *T) {
+// SetNext implements interface function
+func (p *Fields[T]) SetNext(n *T) {
 	p.next.Store(n)
 }
 
-func (p *PoolFields[T]) GetUsageCount() int64 {
+// GetUsageCount implements interface function
+func (p *Fields[T]) GetUsageCount() int64 {
 	return p.usageCount.Load()
 }
 
-func (p *PoolFields[T]) IncrementUsage() {
+// IncrementUsage implements interface function
+func (p *Fields[T]) IncrementUsage() {
 	p.usageCount.Add(1)
 }
 
-func (p *PoolFields[T]) ResetUsage() {
+// ResetUsage implements interface function
+func (p *Fields[T]) ResetUsage() {
 	p.usageCount.Store(0)
 }
 
-// PoolConfig holds configuration options for the pool.
-type PoolConfig[T any, P Poolable[T]] struct {
+// Config holds configuration options for the pool.
+type Config[T any, P Poolable[T]] struct {
 	// Cleanup defines the cleanup policy for the pool
 	Cleanup CleanupPolicy
 	// Allocator is the function to create new objects
@@ -161,16 +168,16 @@ type PoolConfig[T any, P Poolable[T]] struct {
 }
 
 // DefaultConfig returns a default pool configuration for type T.
-func DefaultConfig[T any, P Poolable[T]](allocator Allocator[T], cleaner Cleaner[T]) PoolConfig[T, P] {
-	return PoolConfig[T, P]{
+func DefaultConfig[T any, P Poolable[T]](allocator Allocator[T], cleaner Cleaner[T]) Config[T, P] {
+	return Config[T, P]{
 		Cleanup:   DefaultCleanupPolicy(GcModerate),
 		Allocator: allocator,
 		Cleaner:   cleaner,
 	}
 }
 
-// PoolShard represents a single shard in the pool.
-type PoolShard[T any, P Poolable[T]] struct {
+// Shard represents a single shard in the pool.
+type Shard[T any, P Poolable[T]] struct {
 	// head is the head of the linked list for this shard
 	Head atomic.Pointer[T]
 
@@ -181,7 +188,7 @@ type PoolShard[T any, P Poolable[T]] struct {
 // ShardedPool is the main pool implementation using sharding for better concurrency.
 type ShardedPool[T any, P Poolable[T]] struct {
 	// shards is a slice of pool shards, each on its own cache line
-	Shards []*PoolShard[T, P]
+	Shards []*Shard[T, P]
 
 	// stopClean signals the cleanup goroutine to stop
 	stopClean chan struct{}
@@ -190,7 +197,7 @@ type ShardedPool[T any, P Poolable[T]] struct {
 	cleanWg sync.WaitGroup
 
 	// cfg holds the pool configuration
-	cfg PoolConfig[T, P]
+	cfg Config[T, P]
 
 	// Its used by [GenNCheap], avoids creating slices.
 	FastPath chan P
@@ -202,49 +209,70 @@ func NewPool[T any, P Poolable[T]](allocator Allocator[T], cleaner Cleaner[T]) (
 }
 
 // NewPoolWithConfig creates a new sharded pool with the specified configuration.
-func NewPoolWithConfig[T any, P Poolable[T]](cfg PoolConfig[T, P]) (*ShardedPool[T, P], error) {
-	if cfg.Allocator == nil {
-		return nil, fmt.Errorf("%w: allocator is required", ErrNoAllocator)
-	}
-	if cfg.Cleaner == nil {
-		return nil, fmt.Errorf("%w: cleaner is required", ErrNoCleaner)
+func NewPoolWithConfig[T any, P Poolable[T]](cfg Config[T, P]) (*ShardedPool[T, P], error) {
+	if err := validateConfig(cfg); err != nil {
+		return nil, err
 	}
 
-	if cfg.ShardNumOverride > 0 {
-		numShards = cfg.ShardNumOverride
-	}
-
-	p := &ShardedPool[T, P]{
+	pool := &ShardedPool[T, P]{
 		cfg:       cfg,
 		stopClean: make(chan struct{}),
-		Shards:    make([]*PoolShard[T, P], numShards),
+		Shards:    make([]*Shard[T, P], getShardCount(cfg)),
 		FastPath:  make(chan P, 1),
 	}
 
-	for i := range p.Shards {
-		p.Shards[i] = &PoolShard[T, P]{}
-		p.Shards[i].Head.Store(nil)
-	}
+	initShards(pool)
 
 	if cfg.Cleanup.Enabled {
-		if cfg.Cleanup.Interval <= 0 {
-			return nil, errors.New("cleanup interval must be greater than 0")
+		if err := validateCleanupConfig(cfg); err != nil {
+			return nil, err
 		}
-		if cfg.Cleanup.MinUsageCount <= 0 {
-			return nil, errors.New("minimum usage count must be greater than 0")
-		}
-		p.startCleaner()
+		pool.startCleaner()
 	}
 
-	return p, nil
+	return pool, nil
+}
+
+func validateConfig[T any, P Poolable[T]](cfg Config[T, P]) error {
+	if cfg.Allocator == nil {
+		return fmt.Errorf("%w: allocator is required", ErrNoAllocator)
+	}
+	if cfg.Cleaner == nil {
+		return fmt.Errorf("%w: cleaner is required", ErrNoCleaner)
+	}
+	return nil
+}
+
+func validateCleanupConfig[T any, P Poolable[T]](cfg Config[T, P]) error {
+	if cfg.Cleanup.Interval <= 0 {
+		return errors.New("cleanup interval must be greater than 0")
+	}
+	if cfg.Cleanup.MinUsageCount <= 0 {
+		return errors.New("minimum usage count must be greater than 0")
+	}
+	return nil
+}
+
+func getShardCount[T any, P Poolable[T]](cfg Config[T, P]) int {
+	if cfg.ShardNumOverride > 0 {
+		return cfg.ShardNumOverride
+	}
+	return numShards
+}
+
+func initShards[T any, P Poolable[T]](p *ShardedPool[T, P]) {
+	for i := range p.Shards {
+		p.Shards[i] = &Shard[T, P]{}
+		p.Shards[i].Head.Store(nil)
+	}
 }
 
 // getShard returns the shard for the current goroutine.
-func (p *ShardedPool[T, P]) getShard() *PoolShard[T, P] {
+func (p *ShardedPool[T, P]) getShard() *Shard[T, P] {
 	// Use goroutine's processor ID for shard selection
 	// This provides better locality for goroutines that frequently access the pool
-	id := runtime_procPin()
-	runtime_procUnpin()
+	id := runtimeProcPin()
+	runtimeProcUnpin()
 
 	return p.Shards[id%numShards] // ensure we don't get "index out of bounds error" if number of P's changes
 }
@@ -308,7 +336,7 @@ func (p *ShardedPool[T, P]) PutN(objs []P) {
 }
 
 // retrieveFromShard gets an object from a specific shard.
-func (p *ShardedPool[T, P]) retrieveFromShard(shard *PoolShard[T, P]) (zero P, success bool) {
+func (p *ShardedPool[T, P]) retrieveFromShard(shard *Shard[T, P]) (zero P, success bool) {
 	for {
 		oldHead := P(shard.Head.Load())
 		if oldHead == nil {
@@ -377,31 +405,38 @@ func (p *ShardedPool[T, P]) cleanup() {
 	}
 }
 
-func (p *ShardedPool[T, P]) cleanupShard(shard *PoolShard[T, P]) {
-	// Atomically take the entire list from the shard.
-	oldHead := P(shard.Head.Load())
+func (p *ShardedPool[T, P]) cleanupShard(shard *Shard[T, P]) {
+	oldHead := p.tryTakeOwnership(shard)
 	if oldHead == nil {
 		return
 	}
 
-	if !shard.Head.CompareAndSwap(oldHead, nil) {
-		// The list was modified by another goroutine. We'll just skip this cleanup cycle for this shard
-		// and try again on the next tick. This is a simple, low-contention strategy.
-		return
+	keptHead, keptTail := p.filterUsableObjects(oldHead)
+
+	if keptHead != nil {
+		p.reinsertKeptObjects(shard, keptHead, keptTail)
 	}
+}
 
-	// We now have exclusive ownership of the list starting at oldHead.
-	current := oldHead
-	var keptHead P
+func (p *ShardedPool[T, P]) tryTakeOwnership(shard *Shard[T, P]) P {
+	head := P(shard.Head.Load())
+	if head == nil {
+		return nil
+	}
+	if !shard.Head.CompareAndSwap(head, nil) {
+		return nil
+	}
+	return head
+}
 
-	keptTail := P(new(T))
+func (p *ShardedPool[T, P]) filterUsableObjects(head P) (keptHead, keptTail P) {
+	current := head
 
 	for current != nil {
 		next := current.GetNext()
 		usageCount := current.GetUsageCount()
 
 		if usageCount >= p.cfg.Cleanup.MinUsageCount {
-			// This item is kept.
 			current.ResetUsage()
 			if keptHead == nil {
 				keptHead = current
@@ -410,30 +445,29 @@ func (p *ShardedPool[T, P]) cleanupShard(shard *PoolShard[T, P]) {
 			}
 			keptTail = current
 		} else {
-			// This item is discarded
 			current.SetNext(nil)
 		}
 		current = next
 	}
 
-	// If any items were kept, we need to add them back to the shard's list.
-	if keptHead != nil {
-		keptTail.SetNext(nil) // Terminate our list of kept items.
+	if keptHead == nil {
+		return nil, nil
+	}
 
-		// Atomically prepend the list of kept items to the shard's current list.
-		for {
-			currentHead := P(shard.Head.Load())
-			var nextForTail P
-			if currentHead != nil {
-				nextForTail = currentHead
-			}
-			keptTail.SetNext(nextForTail)
+	keptTail.SetNext(nil)
+	return keptHead, keptTail
+}
 
-			if shard.Head.CompareAndSwap(currentHead, keptHead) {
-				break
-			}
-			// Contention: The head of the shard's list was modified. Retry.
+func (p *ShardedPool[T, P]) reinsertKeptObjects(shard *Shard[T, P], keptHead, keptTail P) {
+	for {
+		currentHead := P(shard.Head.Load())
+		if currentHead != nil {
+			keptTail.SetNext(currentHead)
 		}
+		if shard.Head.CompareAndSwap(currentHead, keptHead) {
+			break
+		}
+		// Retry on contention
 	}
 }
 
@@ -447,8 +481,8 @@ func (p *ShardedPool[T, P]) Close() {
 	}
 }
 
-//go:linkname runtime_procPin runtime.procPin
-func runtime_procPin() int
+//go:linkname runtimeProcPin runtime.procPin
+func runtimeProcPin() int
 
-//go:linkname runtime_procUnpin runtime.procUnpin
-func runtime_procUnpin()
+//go:linkname runtimeProcUnpin runtime.procUnpin
+func runtimeProcUnpin()
