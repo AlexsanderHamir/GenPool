@@ -36,3 +36,8 @@ linters-settings:
 
 issues:
   exclude-use-default: false
+  exclude-rules:
+    - path: "^pool/.*_test\\.go$"
+      linters:
+        - gocyclo
+        - staticcheck
