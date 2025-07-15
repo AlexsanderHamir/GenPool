@@ -55,11 +55,11 @@ var numShards = min(max(runtime.GOMAXPROCS(0), 8), 128)
 
 // CleanupPolicy defines how the pool should clean up unused objects.
 type CleanupPolicy struct {
-	// Enabled determines if automatic cleanup is enabled
+	// Enabled determines if automatic cleanup is enabled.
 	Enabled bool
-	// Interval is how often the cleanup should run
+	// Interval is how often the cleanup should run.
 	Interval time.Duration
-	// MinUsageCount is the number of usage BELOW which an object will be evicted
+	// MinUsageCount is the number of usage BELOW which an object will be evicted.
 	MinUsageCount int64
 }
 
@@ -121,6 +121,33 @@ type Poolable[T any] interface {
 	ResetUsage()
 }
 
+// PoolFields provides intrusive fields and logic for a poolable object.
+// This struct can be embedded in user types.
+type PoolFields[T any] struct {
+	usageCount atomic.Int64
+	next       atomic.Pointer[T]
+}
+
+func (p *PoolFields[T]) GetNext() *T {
+	return p.next.Load()
+}
+
+func (p *PoolFields[T]) SetNext(n *T) {
+	p.next.Store(n)
+}
+
+func (p *PoolFields[T]) GetUsageCount() int64 {
+	return p.usageCount.Load()
+}
+
+func (p *PoolFields[T]) IncrementUsage() {
+	p.usageCount.Add(1)
+}
+
+func (p *PoolFields[T]) ResetUsage() {
+	p.usageCount.Store(0)
+}
+
 // PoolConfig holds configuration options for the pool.
 type PoolConfig[T any, P Poolable[T]] struct {
 	// Cleanup defines the cleanup policy for the pool
@@ -166,7 +193,6 @@ type ShardedPool[T any, P Poolable[T]] struct {
 	cfg PoolConfig[T, P]
 
 	// Its used by [GenNCheap], avoids creating slices.
-	// A channel is only created if GetNCheap is called.
 	FastPath chan P
 }
 
@@ -182,6 +208,10 @@ func NewPoolWithConfig[T any, P Poolable[T]](cfg PoolConfig[T, P]) (*ShardedPool
 	}
 	if cfg.Cleaner == nil {
 		return nil, fmt.Errorf("%w: cleaner is required", ErrNoCleaner)
+	}
+
+	if cfg.ShardNumOverride > 0 {
+		numShards = cfg.ShardNumOverride
 	}
 
 	p := &ShardedPool[T, P]{
@@ -422,30 +452,3 @@ func runtime_procPin() int
 
 //go:linkname runtime_procUnpin runtime.procUnpin
 func runtime_procUnpin()
-
-// PoolFields provides intrusive fields and logic for a poolable object.
-// This struct can be embedded in user types.
-type PoolFields[T any] struct {
-	usageCount atomic.Int64
-	next       atomic.Pointer[T]
-}
-
-func (p *PoolFields[T]) GetNext() *T {
-	return p.next.Load()
-}
-
-func (p *PoolFields[T]) SetNext(n *T) {
-	p.next.Store(n)
-}
-
-func (p *PoolFields[T]) GetUsageCount() int64 {
-	return p.usageCount.Load()
-}
-
-func (p *PoolFields[T]) IncrementUsage() {
-	p.usageCount.Add(1)
-}
-
-func (p *PoolFields[T]) ResetUsage() {
-	p.usageCount.Store(0)
-}
