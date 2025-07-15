@@ -22,7 +22,6 @@ GenPool outperforms sync.Pool in scenarios where objects are retained longer and
 - [Cleanup Levels](#cleanup-levels)
 - [Total Manual Control](#total-manual-control)
 - [Contributing](#contributing)
-- [Complete Example](#complete-example)
 - [License](#license)
 
 ## Performance
@@ -203,10 +202,6 @@ go test -bench=. ./...
 5. Ensure all tests pass before submitting PRs
 
 > The best improvement is to do less!!!
-
-## Complete Example
-
-For a fully working example with its own Go module, see the [example](./code_example) directory.
 
 ## License
 
