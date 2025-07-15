@@ -60,11 +60,11 @@ func TestPoolRetrieveOrCreate(t *testing.T) {
 	}
 }
 
-func createConfig[T any, P pool.Poolable[T]](interval time.Duration, min int64, override int) *pool.Config[TestObject, *TestObject] {
+func createConfig[T any, P pool.Poolable[T]](interval time.Duration, minUsage int64, override int) *pool.Config[TestObject, *TestObject] {
 	cfg := pool.DefaultConfig(testAllocator, testCleaner)
 	cfg.Cleanup.Enabled = true
 	cfg.Cleanup.Interval = interval * time.Millisecond
-	cfg.Cleanup.MinUsageCount = min
+	cfg.Cleanup.MinUsageCount = minUsage
 
 	if override > 0 {
 		cfg.ShardNumOverride = override
@@ -82,13 +82,13 @@ func TestPoolCleanupUsageCount(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer p.Close()
-		obj1 := p.Get() // usageCount = 1
+		obj1 := p.Get()
 		if obj1 == nil {
 			t.Fatal("Get() returned nil object")
 		}
 
-		obj1.IncrementUsage() // usageCount = 2
-		obj1.IncrementUsage() // usageCount = 3
+		obj1.IncrementUsage()
+		obj1.IncrementUsage()
 		p.Put(obj1)
 
 		// Should clean in two passes.
@@ -106,13 +106,13 @@ func TestPoolCleanupUsageCount(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer p.Close()
-		obj1 := p.Get() // usageCount = 1
+		obj1 := p.Get()
 		if obj1 == nil {
 			t.Fatal("Get() returned nil object")
 		}
 
-		obj1.IncrementUsage() // usageCount = 2
-		obj1.IncrementUsage() // usageCount = 3
+		obj1.IncrementUsage()
+		obj1.IncrementUsage()
 		p.Put(obj1)
 
 		// Should clean in two passes.
