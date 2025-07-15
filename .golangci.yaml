@@ -26,6 +26,13 @@ linters-settings:
       - name: atomic
       - name: bare-return
       - name: bool-literal-in-expr
+      - name: confusing-naming
+      - name: confusing-results
+      - name: constant-logical-expr
+      - name: context-as-argument
+      - name: datarace
+      - name: deep-exit
+      - name: early-return
 
 issues:
   exclude-use-default: false
