@@ -6,9 +6,11 @@
 *.md export-ignore
 LICENSE export-ignore
 
+pool/**/*_test.go export-ignore
 benchmark_results_transparency/ export-ignore
 code_example/ export-ignore
 docs/ export-ignore
 technical_discussions/ export-ignore
 test/ export-ignore
 go.work export-ignore
+
