@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"sync/atomic"
+
 	"github.com/AlexsanderHamir/GenPool/pool"
 )
 
@@ -24,7 +26,7 @@ func cpuIntensiveWorkload(obj *BenchmarkObject) {
 
 	// Heavier CPU work
 	var result int64
-	for i := range 50_000 {
+	for i := range 10_000 {
 		result += int64(i * i * i)
 		result ^= int64(i << 3)
 		if i%1000 == 0 {
@@ -162,6 +164,59 @@ func BenchmarkGenPoolTargetSizeCleanup(b *testing.B) {
 	}
 
 	benchmarkPoolWithConfig(b, cfg)
+}
+
+// BenchmarkGenPoolCoreOps benchmarks the pool's core Get/Put overhead and allocation stats with minimal workload.
+func BenchmarkGenPoolCoreOps(b *testing.B) {
+	var allocs int64
+	allocatorWithCount := func() *BenchmarkObject {
+		atomic.AddInt64(&allocs, 1)
+		return &BenchmarkObject{Name: "coreops"}
+	}
+	cleanerNoop := func(obj *BenchmarkObject) {
+		*obj = BenchmarkObject{}
+	}
+
+	cfg := pool.Config[BenchmarkObject, *BenchmarkObject]{
+		Allocator: allocatorWithCount,
+		Cleaner:   cleanerNoop,
+		Cleanup: pool.CleanupPolicy{
+			Enabled: false,
+		},
+	}
+
+	p, err := pool.NewPoolWithConfig(cfg)
+	if err != nil {
+		b.Fatalf("error creating pool: %v", err)
+	}
+	defer p.Close()
+
+	b.Run("Serial", func(b *testing.B) {
+		b.ResetTimer()
+		for b.Loop() {
+			obj := p.Get()
+			if obj == nil {
+				b.Fatal("obj is nil")
+			}
+			p.Put(obj)
+		}
+	})
+
+	b.Run("Parallel", func(b *testing.B) {
+		b.SetParallelism(1000)
+		b.ResetTimer()
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				obj := p.Get()
+				if obj == nil {
+					b.Fatal("obj is nil")
+				}
+				p.Put(obj)
+			}
+		})
+	})
+
+	b.Logf("Total allocations: %d", allocs)
 }
 
 // benchmarkPoolWithConfig is a helper function to run benchmarks with a specific config.
