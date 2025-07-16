@@ -75,9 +75,6 @@ func BenchmarkGenPool(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			obj := p.Get()
-
-			cpuIntensiveWorkload(obj)
-
 			p.Put(obj)
 		}
 	})
@@ -95,8 +92,6 @@ func BenchmarkSyncPool(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			obj := p.Get().(*BenchmarkObject)
-
-			cpuIntensiveWorkload(obj)
 
 			obj.Name = ""
 			obj.Data = obj.Data[:0]

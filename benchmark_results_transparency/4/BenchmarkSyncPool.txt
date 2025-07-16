@@ -1,0 +1,56 @@
+goos: darwin
+goarch: arm64
+pkg: github.com/AlexsanderHamir/GenPool/test
+cpu: Apple M1
+BenchmarkSyncPool-8   	  218143	      5548 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  220760	      5507 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  222183	      5414 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  211725	      5471 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  213294	      5495 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  216063	      5581 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  215070	      5659 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  191372	      5506 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  216526	      5434 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  218722	      5451 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  214743	      5513 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  217683	      5406 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  216276	      5517 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  214851	      5498 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  213379	      5427 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  220579	      5462 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  220172	      5442 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  218013	      5454 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  217225	      5473 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  221170	      5417 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  219552	      5461 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  218206	      5434 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  216967	      5425 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  217299	      5440 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  213434	      5492 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  213464	      5463 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  217502	      5450 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  206763	      5523 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  215002	      5486 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  214227	      5417 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  222805	      5441 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  223884	      5307 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  221152	      5285 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  221493	      5286 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  223569	      5308 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  223608	      5295 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  222994	      5292 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  223261	      5277 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  223587	      5278 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  222338	      5287 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  216927	      5295 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  223929	      5280 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  223924	      5291 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  222438	      5291 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  222765	      5287 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  221410	      5295 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  222943	      5272 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  222553	      5286 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  223381	      5291 ns/op	       3 B/op	       0 allocs/op
+BenchmarkSyncPool-8   	  222232	      5281 ns/op	       3 B/op	       0 allocs/op
+PASS
+ok  	github.com/AlexsanderHamir/GenPool/test	63.476s

@@ -1,8 +1,8 @@
 # GenPool
 
-GenPool outperforms sync.Pool in scenarios where objects are retained longer and concurrency is medium to high, while also giving you fine-grained control over memory reclamation timing and aggressiveness.
+GenPool outperforms sync.Pool in scenarios where objects are retained longer, while also giving you fine-grained control over memory reclamation timing and aggressiveness.
 
-> If your system rarely retains objects and has low concurrency, you’re unlikely to benefit from GenPool’s design.
+> If your system rarely retains objects, you’re unlikely to benefit from GenPool’s design.
 
 [![GoDoc](https://godoc.org/github.com/AlexsanderHamir/GenPool?status.svg)](https://godoc.org/github.com/AlexsanderHamir/GenPool)
 ![Build](https://github.com/AlexsanderHamir/GenPool/actions/workflows/test.yml/badge.svg)
@@ -53,6 +53,9 @@ GenPool outperforms sync.Pool in scenarios where objects are retained longer and
 ### Summary
 
 - As shown, **GenPool** performs better when objects are held for longer periods. Its performance degrades as retention time decreases, due to the overhead of its sharded design.
+
+- For detailed results and interactive graphs, see the [Benchmark Results Transparency](/benchmark_results_transparency) page.
+  - In short, the benchmarks revealed that across all scenarios—whether using a single shard or many, and under both high and low concurrency—the key factor influencing performance was how quickly objects were returned. The closer you're to doing nothing with the object, the more likely `sync.Pool` was to outperform GenPool.
 
 ### ⚙️ Performance Tip
 

@@ -1,0 +1,56 @@
+goos: darwin
+goarch: arm64
+pkg: github.com/AlexsanderHamir/GenPool/test
+cpu: Apple M1
+BenchmarkGenPool-8   	  224019	      5426 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  226201	      5416 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  220090	      5449 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  226929	      5336 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  224266	      5318 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  222735	      5331 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  227368	      5381 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  226462	      5307 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  226648	      5294 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  222994	      5298 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  226113	      5311 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  224643	      5292 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  228205	      5286 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  223107	      5305 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  227917	      5290 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  223124	      5303 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  226364	      5292 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  223792	      5295 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  227584	      5293 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  223196	      5303 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  228313	      5308 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  223208	      5296 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  227349	      5286 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  224412	      5294 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  227426	      5299 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  223555	      5290 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  227893	      5306 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  227173	      5306 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  225708	      5308 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  222078	      5291 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  226819	      5382 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  226851	      5296 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  227235	      5299 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  227576	      5310 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  226242	      5284 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  224908	      5313 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  227647	      5317 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  224655	      5307 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  226399	      5288 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  226928	      5289 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  228336	      5298 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  226490	      5305 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  227691	      5298 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  224604	      5300 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  226982	      5313 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  227448	      5301 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  227707	      5302 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  226704	      5290 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  227140	      5325 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	  228400	      5294 ns/op	       0 B/op	       0 allocs/op
+PASS
+ok  	github.com/AlexsanderHamir/GenPool/test	64.113s
