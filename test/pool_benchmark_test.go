@@ -167,6 +167,7 @@ func BenchmarkGenPoolTargetSizeCleanup(b *testing.B) {
 }
 
 // BenchmarkGenPoolCoreOps benchmarks the pool's core Get/Put overhead and allocation stats with minimal workload.
+// The goal of this benchmark is to expose the hotspots of the library.
 func BenchmarkGenPoolCoreOps(b *testing.B) {
 	var allocs int64
 	allocatorWithCount := func() *BenchmarkObject {
