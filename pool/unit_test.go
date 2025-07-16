@@ -184,7 +184,7 @@ func TestNewPoolWithConfig(t *testing.T) {
 			cfg: Config[TestObject, *TestObject]{
 				Allocator: testAllocator,
 				Cleaner:   testCleaner,
-				Cleanup: &CleanupPolicy{
+				Cleanup: CleanupPolicy{
 					Enabled:       true,
 					Interval:      100 * time.Millisecond,
 					MinUsageCount: 1,
@@ -197,6 +197,7 @@ func TestNewPoolWithConfig(t *testing.T) {
 			cfg: Config[TestObject, *TestObject]{
 				Allocator: nil,
 				Cleaner:   testCleaner,
+				Cleanup:   CleanupPolicy{},
 			},
 			wantErr: true,
 		},
@@ -205,6 +206,7 @@ func TestNewPoolWithConfig(t *testing.T) {
 			cfg: Config[TestObject, *TestObject]{
 				Allocator: testAllocator,
 				Cleaner:   nil,
+				Cleanup:   CleanupPolicy{},
 			},
 			wantErr: true,
 		},
@@ -213,7 +215,7 @@ func TestNewPoolWithConfig(t *testing.T) {
 			cfg: Config[TestObject, *TestObject]{
 				Allocator: testAllocator,
 				Cleaner:   testCleaner,
-				Cleanup: &CleanupPolicy{
+				Cleanup: CleanupPolicy{
 					Enabled:       true,
 					Interval:      0,
 					MinUsageCount: 1,
@@ -226,7 +228,7 @@ func TestNewPoolWithConfig(t *testing.T) {
 			cfg: Config[TestObject, *TestObject]{
 				Allocator: testAllocator,
 				Cleaner:   testCleaner,
-				Cleanup: &CleanupPolicy{
+				Cleanup: CleanupPolicy{
 					Enabled:       true,
 					Interval:      100 * time.Millisecond,
 					MinUsageCount: 0,
@@ -240,6 +242,7 @@ func TestNewPoolWithConfig(t *testing.T) {
 				Allocator:        testAllocator,
 				Cleaner:          testCleaner,
 				ShardNumOverride: 4,
+				Cleanup:          CleanupPolicy{},
 			},
 			wantErr: false,
 		},
@@ -463,7 +466,7 @@ func TestStartCleaner(t *testing.T) {
 	cfg := Config[TestObject, *TestObject]{
 		Allocator: testAllocator,
 		Cleaner:   testCleaner,
-		Cleanup: &CleanupPolicy{
+		Cleanup: CleanupPolicy{
 			Enabled:       true,
 			Interval:      10 * time.Millisecond,
 			MinUsageCount: 1,
@@ -487,7 +490,7 @@ func TestCleanup(t *testing.T) {
 	cfg := Config[TestObject, *TestObject]{
 		Allocator: testAllocator,
 		Cleaner:   testCleaner,
-		Cleanup: &CleanupPolicy{
+		Cleanup: CleanupPolicy{
 			Enabled:       true,
 			Interval:      10 * time.Millisecond,
 			MinUsageCount: 2,
@@ -625,7 +628,7 @@ func TestClose(t *testing.T) {
 	cfg := Config[TestObject, *TestObject]{
 		Allocator: testAllocator,
 		Cleaner:   testCleaner,
-		Cleanup: &CleanupPolicy{
+		Cleanup: CleanupPolicy{
 			Enabled:       true,
 			Interval:      10 * time.Millisecond,
 			MinUsageCount: 1,
@@ -658,7 +661,7 @@ func TestCloseWithoutCleanup(t *testing.T) {
 	cfg := Config[TestObject, *TestObject]{
 		Allocator: testAllocator,
 		Cleaner:   testCleaner,
-		Cleanup: &CleanupPolicy{
+		Cleanup: CleanupPolicy{
 			Enabled: false,
 		},
 	}
@@ -727,7 +730,7 @@ func TestErrorMessages(t *testing.T) {
 	err = validateCleanupConfig(Config[TestObject, *TestObject]{
 		Allocator: testAllocator,
 		Cleaner:   testCleaner,
-		Cleanup: &CleanupPolicy{
+		Cleanup: CleanupPolicy{
 			Enabled:       true,
 			Interval:      0,
 			MinUsageCount: 1,
@@ -741,7 +744,7 @@ func TestErrorMessages(t *testing.T) {
 	err = validateCleanupConfig(Config[TestObject, *TestObject]{
 		Allocator: testAllocator,
 		Cleaner:   testCleaner,
-		Cleanup: &CleanupPolicy{
+		Cleanup: CleanupPolicy{
 			Enabled:       true,
 			Interval:      100 * time.Millisecond,
 			MinUsageCount: 0,
@@ -946,7 +949,7 @@ func TestCleanupShardWithDiscardedObjects(t *testing.T) {
 	cfg := Config[TestObject, *TestObject]{
 		Allocator: testAllocator,
 		Cleaner:   testCleaner,
-		Cleanup: &CleanupPolicy{
+		Cleanup: CleanupPolicy{
 			Enabled:       true,
 			Interval:      10 * time.Millisecond,
 			MinUsageCount: 3, // High threshold to force discarding
@@ -989,7 +992,7 @@ func TestConcurrentPutAndCleanup(t *testing.T) {
 	cfg := Config[TestObject, *TestObject]{
 		Allocator: testAllocator,
 		Cleaner:   testCleaner,
-		Cleanup: &CleanupPolicy{
+		Cleanup: CleanupPolicy{
 			Enabled:       true,
 			Interval:      10 * time.Millisecond,
 			MinUsageCount: 1,
@@ -1078,4 +1081,65 @@ func TestTryTakeOwnershipRaceCondition(t *testing.T) {
 		t.Error("Pool should still be functional after race condition test")
 	}
 	pool.Put(obj)
+}
+
+// TestGrowthPolicy tests the GrowthPolicy (MaxPoolSize and Enable)
+func TestGrowthPolicy(t *testing.T) {
+	t.Run("GrowthEnabled_MaxPoolSize", func(t *testing.T) {
+		cfg := DefaultConfig(testAllocator, testCleaner)
+		cfg.Cleanup.Enabled = false
+		cfg.Growth.Enable = true
+		cfg.Growth.MaxPoolSize = 2
+
+		pool, err := NewPoolWithConfig(cfg)
+		if err != nil {
+			t.Fatalf("NewPoolWithConfig() error = %v", err)
+		}
+		defer pool.Close()
+
+		// Should be able to get up to MaxPoolSize new objects
+		obj1 := pool.Get()
+		if obj1 == nil {
+			t.Error("Get() returned nil for first object")
+		}
+		obj2 := pool.Get()
+		if obj2 == nil {
+			t.Error("Get() returned nil for second object")
+		}
+
+		// Should not be able to get a third new object (unless one is returned)
+		obj3 := pool.Get()
+		if obj3 != nil {
+			t.Error("Get() should return nil when MaxPoolSize is reached and no reusable objects are available")
+		}
+
+		// Return one object, should be able to get again
+		pool.Put(obj1)
+		obj4 := pool.Get()
+		if obj4 == nil {
+			t.Error("Get() should return object after one is returned to pool")
+		}
+	})
+
+	t.Run("GrowthDisabled_Unlimited", func(t *testing.T) {
+		cfg2 := DefaultConfig(testAllocator, testCleaner)
+		cfg2.Growth.Enable = false
+		cfg2.Cleanup.Enabled = false
+		pool2, err := NewPoolWithConfig(cfg2)
+		if err != nil {
+			t.Fatalf("NewPoolWithConfig() error = %v", err)
+		}
+		defer pool2.Close()
+
+		objs := make([]*TestObject, 0, 10)
+		for i := range 10 {
+			obj := pool2.Get()
+			if obj == nil {
+				t.Errorf("Get() returned nil with Growth.Enable=false at i=%d", i)
+			}
+			objs = append(objs, obj)
+		}
+
+		pool2.PutN(objs)
+	})
 }

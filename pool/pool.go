@@ -67,33 +67,33 @@ type CleanupPolicy struct {
 }
 
 // DefaultCleanupPolicy returns a default cleanup configuration based on specified level.
-func DefaultCleanupPolicy(level GcLevel) *CleanupPolicy {
+func DefaultCleanupPolicy(level GcLevel) CleanupPolicy {
 	switch level {
 	case GcDisable:
-		return &CleanupPolicy{
+		return CleanupPolicy{
 			Enabled: false,
 		}
 	case GcLow:
-		return &CleanupPolicy{
+		return CleanupPolicy{
 			Enabled:       true,
 			Interval:      10 * time.Minute,
 			MinUsageCount: 1,
 		}
 	case GcModerate:
-		return &CleanupPolicy{
+		return CleanupPolicy{
 			Enabled:       true,
 			Interval:      2 * time.Minute,
 			MinUsageCount: 2,
 		}
 	case GcAggressive:
-		return &CleanupPolicy{
+		return CleanupPolicy{
 			Enabled:       true,
 			Interval:      30 * time.Second,
 			MinUsageCount: 3,
 		}
 	default:
 		// Fallback to moderate if unrecognized
-		return &CleanupPolicy{
+		return CleanupPolicy{
 			Enabled:       true,
 			Interval:      2 * time.Minute,
 			MinUsageCount: 2,
@@ -158,7 +158,7 @@ func (p *Fields[T]) ResetUsage() {
 // Config holds configuration options for the pool.
 type Config[T any, P Poolable[T]] struct {
 	// Cleanup defines the cleanup policy for the pool
-	Cleanup *CleanupPolicy
+	Cleanup CleanupPolicy
 	// Allocator is the function to create new objects
 	Allocator Allocator[T]
 	// Cleaner is the function to clean objects before returning them to the pool
@@ -167,7 +167,7 @@ type Config[T any, P Poolable[T]] struct {
 	// ShardNumOverride allows you to change [numShards] if its necessary for your use case
 	ShardNumOverride int
 
-	Growth *GrowthPolicy
+	Growth GrowthPolicy
 }
 
 type GrowthPolicy struct {
@@ -250,6 +250,7 @@ func validateConfig[T any, P Poolable[T]](cfg Config[T, P]) error {
 	if cfg.Cleaner == nil {
 		return fmt.Errorf("%w: cleaner is required", ErrNoCleaner)
 	}
+
 	return nil
 }
 
@@ -288,7 +289,8 @@ func (p *ShardedPool[T, P]) getShard() *Shard[T, P] {
 	return p.Shards[id%numShards] // ensure we don't get "index out of bounds error" if number of P's changes
 }
 
-// Get gets an object from the pool or creates a new one.
+// Get returns an object from the pool or creates a new one.
+// Returns nil if MaxPoolSize is set, reached, and no reusable objects are available.
 func (p *ShardedPool[T, P]) Get() P {
 	shard := p.getShard()
 
@@ -298,6 +300,7 @@ func (p *ShardedPool[T, P]) Get() P {
 		return obj
 	}
 
+	// can be broken down
 	if !p.cfg.Growth.Enable || p.CurrentPoolLength.Load() < p.cfg.Growth.MaxPoolSize {
 		obj := P(p.cfg.Allocator())
 		obj.IncrementUsage()
