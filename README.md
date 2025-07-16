@@ -1,6 +1,6 @@
 # GenPool
 
-GenPool outperforms sync.Pool in scenarios where objects are retained longer, while also giving you fine-grained control over memory reclamation timing and aggressiveness.
+GenPool outperforms sync.Pool in scenarios where objects are retained for longer periods, while also giving you fine-grained control over memory reclamation timing and aggressiveness.
 
 > If your system rarely retains objects, you’re unlikely to benefit from GenPool’s design.
 
