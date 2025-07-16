@@ -67,33 +67,33 @@ type CleanupPolicy struct {
 }
 
 // DefaultCleanupPolicy returns a default cleanup configuration based on specified level.
-func DefaultCleanupPolicy(level GcLevel) CleanupPolicy {
+func DefaultCleanupPolicy(level GcLevel) *CleanupPolicy {
 	switch level {
 	case GcDisable:
-		return CleanupPolicy{
+		return &CleanupPolicy{
 			Enabled: false,
 		}
 	case GcLow:
-		return CleanupPolicy{
+		return &CleanupPolicy{
 			Enabled:       true,
 			Interval:      10 * time.Minute,
 			MinUsageCount: 1,
 		}
 	case GcModerate:
-		return CleanupPolicy{
+		return &CleanupPolicy{
 			Enabled:       true,
 			Interval:      2 * time.Minute,
 			MinUsageCount: 2,
 		}
 	case GcAggressive:
-		return CleanupPolicy{
+		return &CleanupPolicy{
 			Enabled:       true,
 			Interval:      30 * time.Second,
 			MinUsageCount: 3,
 		}
 	default:
 		// Fallback to moderate if unrecognized
-		return CleanupPolicy{
+		return &CleanupPolicy{
 			Enabled:       true,
 			Interval:      2 * time.Minute,
 			MinUsageCount: 2,
@@ -158,13 +158,24 @@ func (p *Fields[T]) ResetUsage() {
 // Config holds configuration options for the pool.
 type Config[T any, P Poolable[T]] struct {
 	// Cleanup defines the cleanup policy for the pool
-	Cleanup CleanupPolicy
+	Cleanup *CleanupPolicy
 	// Allocator is the function to create new objects
 	Allocator Allocator[T]
 	// Cleaner is the function to clean objects before returning them to the pool
 	Cleaner Cleaner[T]
+
 	// ShardNumOverride allows you to change [numShards] if its necessary for your use case
 	ShardNumOverride int
+
+	Growth *GrowthPolicy
+}
+
+type GrowthPolicy struct {
+	// MaxPoolSize defines the maximum number of objects the pool is allowed to grow to.
+	MaxPoolSize int64
+
+	// Enable activates growth control. If disabled, the pool will grow and shrink freely based on your configuration.
+	Enable bool
 }
 
 // DefaultConfig returns a default pool configuration for type T.
@@ -198,6 +209,9 @@ type ShardedPool[T any, P Poolable[T]] struct {
 
 	// cfg holds the pool configuration
 	cfg Config[T, P]
+
+	// CurrentPoolLength changes at runtime, keeping track of how many uniqe objects have been created
+	CurrentPoolLength atomic.Int64
 }
 
 // NewPool creates a new sharded pool with the given configuration.
@@ -284,10 +298,14 @@ func (p *ShardedPool[T, P]) Get() P {
 		return obj
 	}
 
-	// Create a new object if none available
-	obj := P(p.cfg.Allocator())
-	obj.IncrementUsage()
-	return obj
+	if !p.cfg.Growth.Enable || p.CurrentPoolLength.Load() < p.cfg.Growth.MaxPoolSize {
+		obj := P(p.cfg.Allocator())
+		obj.IncrementUsage()
+		p.CurrentPoolLength.Add(1)
+		return obj
+	}
+
+	return nil
 }
 
 // GetN returns N objects.

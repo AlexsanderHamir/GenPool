@@ -184,7 +184,7 @@ func TestNewPoolWithConfig(t *testing.T) {
 			cfg: Config[TestObject, *TestObject]{
 				Allocator: testAllocator,
 				Cleaner:   testCleaner,
-				Cleanup: CleanupPolicy{
+				Cleanup: &CleanupPolicy{
 					Enabled:       true,
 					Interval:      100 * time.Millisecond,
 					MinUsageCount: 1,
@@ -213,7 +213,7 @@ func TestNewPoolWithConfig(t *testing.T) {
 			cfg: Config[TestObject, *TestObject]{
 				Allocator: testAllocator,
 				Cleaner:   testCleaner,
-				Cleanup: CleanupPolicy{
+				Cleanup: &CleanupPolicy{
 					Enabled:       true,
 					Interval:      0,
 					MinUsageCount: 1,
@@ -226,7 +226,7 @@ func TestNewPoolWithConfig(t *testing.T) {
 			cfg: Config[TestObject, *TestObject]{
 				Allocator: testAllocator,
 				Cleaner:   testCleaner,
-				Cleanup: CleanupPolicy{
+				Cleanup: &CleanupPolicy{
 					Enabled:       true,
 					Interval:      100 * time.Millisecond,
 					MinUsageCount: 0,
@@ -463,7 +463,7 @@ func TestStartCleaner(t *testing.T) {
 	cfg := Config[TestObject, *TestObject]{
 		Allocator: testAllocator,
 		Cleaner:   testCleaner,
-		Cleanup: CleanupPolicy{
+		Cleanup: &CleanupPolicy{
 			Enabled:       true,
 			Interval:      10 * time.Millisecond,
 			MinUsageCount: 1,
@@ -487,7 +487,7 @@ func TestCleanup(t *testing.T) {
 	cfg := Config[TestObject, *TestObject]{
 		Allocator: testAllocator,
 		Cleaner:   testCleaner,
-		Cleanup: CleanupPolicy{
+		Cleanup: &CleanupPolicy{
 			Enabled:       true,
 			Interval:      10 * time.Millisecond,
 			MinUsageCount: 2,
@@ -625,7 +625,7 @@ func TestClose(t *testing.T) {
 	cfg := Config[TestObject, *TestObject]{
 		Allocator: testAllocator,
 		Cleaner:   testCleaner,
-		Cleanup: CleanupPolicy{
+		Cleanup: &CleanupPolicy{
 			Enabled:       true,
 			Interval:      10 * time.Millisecond,
 			MinUsageCount: 1,
@@ -658,7 +658,7 @@ func TestCloseWithoutCleanup(t *testing.T) {
 	cfg := Config[TestObject, *TestObject]{
 		Allocator: testAllocator,
 		Cleaner:   testCleaner,
-		Cleanup: CleanupPolicy{
+		Cleanup: &CleanupPolicy{
 			Enabled: false,
 		},
 	}
@@ -727,7 +727,7 @@ func TestErrorMessages(t *testing.T) {
 	err = validateCleanupConfig(Config[TestObject, *TestObject]{
 		Allocator: testAllocator,
 		Cleaner:   testCleaner,
-		Cleanup: CleanupPolicy{
+		Cleanup: &CleanupPolicy{
 			Enabled:       true,
 			Interval:      0,
 			MinUsageCount: 1,
@@ -741,7 +741,7 @@ func TestErrorMessages(t *testing.T) {
 	err = validateCleanupConfig(Config[TestObject, *TestObject]{
 		Allocator: testAllocator,
 		Cleaner:   testCleaner,
-		Cleanup: CleanupPolicy{
+		Cleanup: &CleanupPolicy{
 			Enabled:       true,
 			Interval:      100 * time.Millisecond,
 			MinUsageCount: 0,
@@ -946,7 +946,7 @@ func TestCleanupShardWithDiscardedObjects(t *testing.T) {
 	cfg := Config[TestObject, *TestObject]{
 		Allocator: testAllocator,
 		Cleaner:   testCleaner,
-		Cleanup: CleanupPolicy{
+		Cleanup: &CleanupPolicy{
 			Enabled:       true,
 			Interval:      10 * time.Millisecond,
 			MinUsageCount: 3, // High threshold to force discarding
@@ -989,7 +989,7 @@ func TestConcurrentPutAndCleanup(t *testing.T) {
 	cfg := Config[TestObject, *TestObject]{
 		Allocator: testAllocator,
 		Cleaner:   testCleaner,
-		Cleanup: CleanupPolicy{
+		Cleanup: &CleanupPolicy{
 			Enabled:       true,
 			Interval:      10 * time.Millisecond,
 			MinUsageCount: 1,
