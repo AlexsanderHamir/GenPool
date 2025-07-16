@@ -70,9 +70,7 @@ type CleanupPolicy struct {
 func DefaultCleanupPolicy(level GcLevel) CleanupPolicy {
 	switch level {
 	case GcDisable:
-		return CleanupPolicy{
-			Enabled: false,
-		}
+		return CleanupPolicy{}
 	case GcLow:
 		return CleanupPolicy{
 			Enabled:       true,

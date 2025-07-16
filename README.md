@@ -20,8 +20,11 @@ GenPool outperforms sync.Pool in scenarios where objects are retained longer and
 - [Performance](#performance)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
+- [Features](#features)
+- [Cleanup Policy](#cleanup-policy)
 - [Cleanup Levels](#cleanup-levels)
-- [Total Manual Control](#total-manual-control)
+- [Growth Policy](#growth-policy)
+- [Manual Control](#manual-control)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -137,6 +140,53 @@ func main() {
 }
 ```
 
+## Features
+
+1. **Growth Control**
+   Limit how large the pool can grow using the `GrowthPolicy`, giving you precise control over memory usage.
+
+2. **Cleanup Control**
+   Fine-tune how often and how aggressively the pool is cleaned up with `CleanupPolicy`.
+
+3. **Set Cleaner Once**
+   Provide a `cleaner` function to automatically reset or sanitize objects before reuse—no manual cleanup required.
+
+4. **Shards Control**
+   Configure the number of shards in the pool.
+   → Sharding helps distribute load and significantly improves performance under heavy concurrency.
+
+## Growth Policy
+
+If no growth policy is provided, the pool will grow **indefinitely**. In this case, any resource control will rely entirely on the `CleanupPolicy`.
+
+```go
+// GrowthPolicy defines constraints on how the pool is allowed to grow.
+type GrowthPolicy struct {
+	// Enable determines whether growth limiting is active.
+	// If false, the pool can grow and shrink without restriction.
+	Enable bool
+
+	// MaxPoolSize sets the upper limit on the number of objects the pool can hold.
+	MaxPoolSize int64
+}
+```
+
+## Cleanup Policy
+
+If no cleanup policy is provided in the config, the zero value will be used by default, which means automatic cleanup is **disabled**.
+
+```go
+// CleanupPolicy defines how the pool should automatically clean up unused objects.
+type CleanupPolicy struct {
+	// Enabled indicates whether automatic cleanup is active.
+	Enabled bool
+	// Interval specifies how frequently the cleanup process should run.
+	Interval time.Duration
+	// MinUsageCount sets the usage threshold below which objects will be evicted.
+	MinUsageCount int64
+}
+```
+
 ## Cleanup Levels
 
 Use `DefaultCleanupPolicy(level)` to get a predefined [CleanupPolicy].
@@ -154,7 +204,7 @@ Use `DefaultCleanupPolicy(level)` to get a predefined [CleanupPolicy].
 Cleanup: pool.DefaultCleanupPolicy(pool.GcModerate)
 ```
 
-## Total Manual Control
+## Manual Control
 
 For advanced users who prefer full control over memory reclamation, GenPool allows you to **disable automatic cleanup** using the `GcDisable` policy, and the pool exposes its internal fields to allow for custom logic.
 
@@ -193,6 +243,10 @@ cd GenPool
 # Run tests to verify setup
 go test -v ./...
 go test -bench=. ./...
+
+# Check for linter errors
+ go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+ golangci-lint run
 ```
 
 ### Development Guidelines
