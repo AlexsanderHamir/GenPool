@@ -159,17 +159,22 @@ func (p *Fields[T]) ResetUsage() {
 type Config[T any, P Poolable[T]] struct {
 	// Cleanup defines the cleanup policy for the pool
 	Cleanup CleanupPolicy
+
+	// Growth defined the growth policy for the pool
+	Growth GrowthPolicy
+
 	// Allocator is the function to create new objects
 	Allocator Allocator[T]
+
 	// Cleaner is the function to clean objects before returning them to the pool
 	Cleaner Cleaner[T]
 
 	// ShardNumOverride allows you to change [numShards] if its necessary for your use case
 	ShardNumOverride int
-
-	Growth GrowthPolicy
 }
 
+// GrowthPolicy controls how the pool is allowed to grow.
+// If unset, the pool will grow indefinitely, and any cleanup will rely solely on the CleanupPolicy.
 type GrowthPolicy struct {
 	// MaxPoolSize defines the maximum number of objects the pool is allowed to grow to.
 	MaxPoolSize int64
