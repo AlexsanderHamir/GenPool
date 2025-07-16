@@ -584,7 +584,7 @@ func TestFilterUsableObjects(t *testing.T) {
 
 	pool.cfg.Cleanup.MinUsageCount = 2
 
-	keptHead, keptTail := pool.filterUsableObjects(obj1)
+	keptHead, keptTail, _ := pool.filterUsableObjects(obj1)
 
 	if keptHead == nil {
 		t.Error("filterUsableObjects() should return kept objects")
@@ -781,7 +781,7 @@ func TestFilterUsableObjectsEdgeCases(t *testing.T) {
 	// Set MinUsageCount to 3, so all objects should be discarded
 	pool.cfg.Cleanup.MinUsageCount = 3
 
-	keptHead, keptTail := pool.filterUsableObjects(obj1)
+	keptHead, keptTail, _ := pool.filterUsableObjects(obj1)
 
 	// All objects should be discarded
 	if keptHead != nil {
@@ -834,7 +834,7 @@ func TestFilterUsableObjectsMixed(t *testing.T) {
 	// Set MinUsageCount to 3, so only obj2 and obj4 should be kept
 	pool.cfg.Cleanup.MinUsageCount = 3
 
-	keptHead, keptTail := pool.filterUsableObjects(obj1)
+	keptHead, keptTail, _ := pool.filterUsableObjects(obj1)
 
 	// Should keep obj2 and obj4
 	if keptHead != obj2 {

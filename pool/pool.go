@@ -363,7 +363,7 @@ func (p *ShardedPool[T, P]) retrieveFromShard(shard *Shard[T, P]) (zero P, succe
 	}
 }
 
-// Clear removes all objects from the pool.
+// Clear removes all objects from the pool and decrements the pool length accordingly.
 func (p *ShardedPool[T, P]) clear() {
 	for _, shard := range p.Shards {
 		for {
@@ -375,11 +375,16 @@ func (p *ShardedPool[T, P]) clear() {
 			if shard.Head.CompareAndSwap(current, nil) {
 				// We have successfully taken the list.
 				// Now iterate and clean it.
+				removedCount := int64(0)
 				for current != nil {
 					next := current.GetNext()
 					current.SetNext(nil)
 					p.cfg.Cleaner(current)
+					removedCount++
 					current = next
+				}
+				if removedCount > 0 {
+					p.CurrentPoolLength.Add(-removedCount)
 				}
 				break // move to next shard
 			}
@@ -424,7 +429,11 @@ func (p *ShardedPool[T, P]) cleanupShard(shard *Shard[T, P]) {
 		return
 	}
 
-	keptHead, keptTail := p.filterUsableObjects(oldHead)
+	keptHead, keptTail, evictedCount := p.filterUsableObjects(oldHead)
+
+	if evictedCount > 0 {
+		p.CurrentPoolLength.Add(-int64(evictedCount))
+	}
 
 	if keptHead != nil {
 		p.reinsertKeptObjects(shard, keptHead, keptTail)
@@ -442,7 +451,8 @@ func (p *ShardedPool[T, P]) tryTakeOwnership(shard *Shard[T, P]) P {
 	return head
 }
 
-func (p *ShardedPool[T, P]) filterUsableObjects(head P) (keptHead, keptTail P) {
+// filterUsableObjects filters objects based on usage count and returns the kept head, kept tail, and number of evicted objects.
+func (p *ShardedPool[T, P]) filterUsableObjects(head P) (keptHead, keptTail P, evictedCount int) {
 	current := head
 
 	for current != nil {
@@ -459,16 +469,17 @@ func (p *ShardedPool[T, P]) filterUsableObjects(head P) (keptHead, keptTail P) {
 			keptTail = current
 		} else {
 			current.SetNext(nil)
+			evictedCount++
 		}
 		current = next
 	}
 
 	if keptHead == nil {
-		return nil, nil
+		return nil, nil, evictedCount
 	}
 
 	keptTail.SetNext(nil)
-	return keptHead, keptTail
+	return keptHead, keptTail, evictedCount
 }
 
 func (p *ShardedPool[T, P]) reinsertKeptObjects(shard *Shard[T, P], keptHead, keptTail P) {
