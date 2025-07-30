@@ -191,12 +191,16 @@ func DefaultConfig[T any, P Poolable[T]](allocator Allocator[T], cleaner Cleaner
 }
 
 // Shard represents a single shard in the pool.
+// It is 64 bytes in total to avoid false sharing across CPU cache lines.
 type Shard[T any, P Poolable[T]] struct {
-	// head is the head of the linked list for this shard
-	Head atomic.Pointer[T]
+	Head  atomic.Pointer[T] // 8 bytes
+	Cond  *sync.Cond        // 8 bytes
+	Mutex *sync.Mutex       // 8 bytes
 
-	// pad ensures each shard is on its own cache line
-	_ [64 - unsafe.Sizeof(atomic.Pointer[T]{})%64]byte
+	// Padding to make the struct 64 bytes in total
+	_ [64 - unsafe.Sizeof(atomic.Pointer[T]{}) -
+		unsafe.Sizeof((*sync.Cond)(nil)) -
+		unsafe.Sizeof((*sync.Mutex)(nil))]byte
 }
 
 // ShardedPool is the main pool implementation using sharding for better concurrency.
@@ -215,6 +219,24 @@ type ShardedPool[T any, P Poolable[T]] struct {
 
 	// CurrentPoolLength changes at runtime, keeping track of how many uniqe objects have been created
 	CurrentPoolLength atomic.Int64
+
+	// blockedShards keeps track of how many goroutines are blocked and in which shards.
+	blockedShards map[int]*atomic.Int64
+}
+
+func (p *ShardedPool[T, P]) getMostBlockedShard() *Shard[T, P] {
+	var mostBlockedShard *Shard[T, P]
+	var maxBlocked int64 = -1
+
+	for shardID, counter := range p.blockedShards {
+		val := counter.Load()
+		if val > maxBlocked {
+			maxBlocked = val
+			mostBlockedShard = p.Shards[shardID]
+		}
+	}
+
+	return mostBlockedShard
 }
 
 // NewPool creates a new sharded pool with the given configuration.
@@ -229,9 +251,10 @@ func NewPoolWithConfig[T any, P Poolable[T]](cfg Config[T, P]) (*ShardedPool[T, 
 	}
 
 	pool := &ShardedPool[T, P]{
-		cfg:       cfg,
-		stopClean: make(chan struct{}),
-		Shards:    make([]*Shard[T, P], getShardCount(cfg)),
+		cfg:           cfg,
+		stopClean:     make(chan struct{}),
+		blockedShards: map[int]*atomic.Int64{},
+		Shards:        make([]*Shard[T, P], getShardCount(cfg)),
 	}
 
 	initShards(pool)
@@ -277,25 +300,32 @@ func getShardCount[T any, P Poolable[T]](cfg Config[T, P]) int {
 
 func initShards[T any, P Poolable[T]](p *ShardedPool[T, P]) {
 	for i := range p.Shards {
-		p.Shards[i] = &Shard[T, P]{}
-		p.Shards[i].Head.Store(nil)
+		mu := &sync.Mutex{}
+		shard := &Shard[T, P]{
+			Mutex: mu,
+			Cond:  sync.NewCond(mu),
+		}
+		shard.Head.Store(nil)
+
+		p.Shards[i] = shard
+		p.blockedShards[i] = new(atomic.Int64)
 	}
 }
 
 // getShard returns the shard for the current goroutine.
-func (p *ShardedPool[T, P]) getShard() *Shard[T, P] {
+func (p *ShardedPool[T, P]) getShard() (*Shard[T, P], int) {
 	// Use goroutine's processor ID for shard selection
 	// This provides better locality for goroutines that frequently access the pool
 	id := runtimeProcPin()
 	runtimeProcUnpin()
 
-	return p.Shards[id%numShards] // ensure we don't get "index out of bounds error" if number of P's changes
+	return p.Shards[id%numShards], id // ensure we don't get "index out of bounds error" if number of P's changes
 }
 
 // Get returns an object from the pool or creates a new one.
 // Returns nil if MaxPoolSize is set, reached, and no reusable objects are available.
 func (p *ShardedPool[T, P]) Get() P {
-	shard := p.getShard()
+	shard, _ := p.getShard()
 
 	// Try to get an object from the shard
 	if obj, ok := p.retrieveFromShard(shard); ok {
@@ -303,7 +333,6 @@ func (p *ShardedPool[T, P]) Get() P {
 		return obj
 	}
 
-	// can be broken down
 	if !p.cfg.Growth.Enable || p.CurrentPoolLength.Load() < p.cfg.Growth.MaxPoolSize {
 		obj := P(p.cfg.Allocator())
 		obj.IncrementUsage()
@@ -312,6 +341,57 @@ func (p *ShardedPool[T, P]) Get() P {
 	}
 
 	return nil
+}
+
+// GetBlock retrieves an object from the pool, blocking if necessary until one becomes available.
+// It first attempts to reuse an object from the shard, then allocates a new one if the pool isn't full.
+// If the pool has reached its maximum size, it blocks until another goroutine puts an object back.
+func (p *ShardedPool[T, P]) GetBlock() P {
+	shard, shardID := p.getShard()
+
+	// Try fast path
+	if obj, ok := p.retrieveFromShard(shard); ok {
+		obj.IncrementUsage()
+		return obj
+	}
+
+	// Try to allocate new one if allowed
+	if !p.cfg.Growth.Enable || p.CurrentPoolLength.Load() < p.cfg.Growth.MaxPoolSize {
+		obj := P(p.cfg.Allocator())
+		obj.IncrementUsage()
+		p.CurrentPoolLength.Add(1)
+		return obj
+	}
+
+	// Block: resource exhausted, wait for one to be returned
+	p.blockedShards[shardID].Add(1)
+	shard.Mutex.Lock()
+	defer shard.Mutex.Unlock()
+
+	for {
+		if obj, ok := p.retrieveFromShard(shard); ok {
+			obj.IncrementUsage()
+			return obj
+		}
+		shard.Cond.Wait()
+	}
+}
+
+// PutBlock returns an object to the pool and signals a blocked goroutine, if any.
+// It attempts to atomically insert the object at the head of the most blocked shard's list.
+func (p *ShardedPool[T, P]) PutBlock(obj P) {
+	p.cfg.Cleaner(obj)
+	shard := p.getMostBlockedShard()
+
+	for {
+		oldHead := P(shard.Head.Load())
+
+		if shard.Head.CompareAndSwap(oldHead, obj) {
+			obj.SetNext(oldHead)
+			shard.Cond.Signal()
+			return
+		}
+	}
 }
 
 // GetN returns N objects.
@@ -329,7 +409,7 @@ func (p *ShardedPool[T, P]) GetN(n int) []P {
 // Put returns an object to the pool.
 func (p *ShardedPool[T, P]) Put(obj P) {
 	p.cfg.Cleaner(obj)
-	shard := p.getShard()
+	shard, _ := p.getShard()
 
 	for {
 		oldHead := P(shard.Head.Load())

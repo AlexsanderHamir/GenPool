@@ -285,7 +285,8 @@ func TestGetShardCount(t *testing.T) {
 // TestInitShards tests the initShards function
 func TestInitShards(t *testing.T) {
 	pool := &ShardedPool[TestObject, *TestObject]{
-		Shards: make([]*Shard[TestObject, *TestObject], 4),
+		Shards:        make([]*Shard[TestObject, *TestObject], 4),
+		blockedShards: map[int]*atomic.Int64{},
 	}
 
 	initShards(pool)
@@ -303,11 +304,13 @@ func TestInitShards(t *testing.T) {
 // TestGetShard tests the getShard method
 func TestGetShard(t *testing.T) {
 	pool := &ShardedPool[TestObject, *TestObject]{
-		Shards: make([]*Shard[TestObject, *TestObject], 4),
+		Shards:        make([]*Shard[TestObject, *TestObject], 4),
+		blockedShards: map[int]*atomic.Int64{},
 	}
+
 	initShards(pool)
 
-	shard := pool.getShard()
+	shard, _ := pool.getShard()
 	if shard == nil {
 		t.Error("getShard() should not return nil")
 	}
@@ -414,7 +417,7 @@ func TestRetrieveFromShard(t *testing.T) {
 	}
 	defer pool.Close()
 
-	shard := pool.getShard()
+	shard, _ := pool.getShard()
 
 	// Test with empty shard
 	obj, success := pool.retrieveFromShard(shard)
@@ -520,7 +523,7 @@ func TestCleanupShard(t *testing.T) {
 	}
 	defer pool.Close()
 
-	shard := pool.getShard()
+	shard, _ := pool.getShard()
 
 	// Test with empty shard
 	pool.cleanupShard(shard)
@@ -542,7 +545,7 @@ func TestTryTakeOwnership(t *testing.T) {
 	}
 	defer pool.Close()
 
-	shard := pool.getShard()
+	shard, _ := pool.getShard()
 
 	// Test with empty shard
 	obj := pool.tryTakeOwnership(shard)
@@ -607,7 +610,7 @@ func TestReinsertKeptObjects(t *testing.T) {
 	}
 	defer pool.Close()
 
-	shard := pool.getShard()
+	shard, _ := pool.getShard()
 
 	// Create objects to reinsert
 	obj1 := pool.Get()
@@ -869,7 +872,7 @@ func TestReinsertKeptObjectsContention(t *testing.T) {
 	}
 	defer pool.Close()
 
-	shard := pool.getShard()
+	shard, _ := pool.getShard()
 
 	// Create objects to reinsert
 	obj1 := pool.Get()
@@ -981,7 +984,7 @@ func TestCleanupShardWithDiscardedObjects(t *testing.T) {
 
 	// All objects should be discarded due to low usage count
 	// The pool should be empty after cleanup
-	shard := pool.getShard()
+	shard, _ := pool.getShard()
 	if shard.Head.Load() != nil {
 		t.Error("cleanup() should discard objects with usage count below MinUsageCount")
 	}
@@ -1043,7 +1046,7 @@ func TestTryTakeOwnershipRaceCondition(t *testing.T) {
 	}
 	defer pool.Close()
 
-	shard := pool.getShard()
+	shard, _ := pool.getShard()
 
 	// Add some objects to the shard
 	obj1 := pool.Get()
@@ -1121,25 +1124,54 @@ func TestGrowthPolicy(t *testing.T) {
 		}
 	})
 
-	t.Run("GrowthDisabled_Unlimited", func(t *testing.T) {
-		cfg2 := DefaultConfig(testAllocator, testCleaner)
-		cfg2.Growth.Enable = false
-		cfg2.Cleanup.Enabled = false
-		pool2, err := NewPoolWithConfig(cfg2)
+	t.Run("BlocksWhenPoolAtMax", func(t *testing.T) {
+		cfg := DefaultConfig(testAllocator, testCleaner)
+		cfg.Cleanup.Enabled = false
+		cfg.Growth.Enable = true
+		cfg.Growth.MaxPoolSize = 2
+
+		pool, err := NewPoolWithConfig(cfg)
 		if err != nil {
 			t.Fatalf("NewPoolWithConfig() error = %v", err)
 		}
-		defer pool2.Close()
+		defer pool.Close()
 
-		objs := make([]*TestObject, 0, 10)
-		for i := range 10 {
-			obj := pool2.Get()
-			if obj == nil {
-				t.Errorf("Get() returned nil with Growth.Enable=false at i=%d", i)
-			}
-			objs = append(objs, obj)
+		// Fill pool to max size
+		obj1 := pool.GetBlock()
+		obj2 := pool.GetBlock()
+		if obj1 == nil || obj2 == nil {
+			t.Fatal("failed to allocate initial objects")
 		}
 
-		pool2.PutN(objs)
+		blockedCh := make(chan *TestObject, 1)
+
+		// This should block until an object is returned
+		go func() {
+			obj3 := pool.GetBlock()
+			blockedCh <- obj3
+		}()
+
+		// Ensure blocking actually happens (give the goroutine time to hit Wait)
+		time.Sleep(100 * time.Millisecond)
+
+		select {
+		case <-blockedCh:
+			t.Error("GetBlock() returned early — expected it to block")
+		default:
+			// Expected: still blocked
+		}
+
+		// Return one object to unblock the waiting goroutine
+		pool.PutBlock(obj1)
+
+		select {
+		case obj3 := <-blockedCh:
+			if obj3 == nil {
+				t.Error("GetBlock() unblocked but returned nil object")
+			}
+		case <-time.After(5 * time.Second):
+			t.Error("GetBlock() did not unblock after object was returned")
+		}
 	})
+
 }
