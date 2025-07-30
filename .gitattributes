@@ -13,4 +13,4 @@ docs/ export-ignore
 technical_discussions/ export-ignore
 test/ export-ignore
 go.work export-ignore
-
+.golangci.yaml export-ignore
