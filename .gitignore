@@ -5,3 +5,5 @@ config_template.json
 .DS_Store
 **/.DS_Store
 general.txt
+*_functions
+**/bin

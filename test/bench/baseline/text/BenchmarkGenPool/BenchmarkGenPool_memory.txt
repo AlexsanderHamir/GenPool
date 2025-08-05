@@ -1,0 +1,56 @@
+File: test.test
+Type: alloc_space
+Time: 2025-08-04 16:57:39 PDT
+Showing nodes accounting for 93.80MB, 100% of 93.80MB total
+      flat  flat%   sum%        cum   cum%
+         0     0%     0%       52MB 55.44%  testing.(*B).runN
+         0     0%     0%    51.50MB 54.91%  github.com/AlexsanderHamir/GenPool/test.BenchmarkGenPool
+   51.50MB 54.91% 54.91%    51.50MB 54.91%  testing.(*B).RunParallel
+         0     0% 54.91%    38.50MB 41.05%  testing.(*B).launch
+      31MB 33.05% 87.96%       31MB 33.05%  testing.(*B).RunParallel.func1
+         0     0% 87.96%       13MB 13.86%  testing.(*B).run1.func1
+         0     0% 87.96%     5.55MB  5.92%  runtime.newproc.func1
+         0     0% 87.96%     5.55MB  5.92%  runtime.newproc1
+         0     0% 87.96%     5.55MB  5.92%  runtime.systemstack
+    4.50MB  4.80% 92.76%     4.50MB  4.80%  runtime.malg
+         0     0% 92.76%     2.52MB  2.69%  runtime/pprof.profileWriter
+         0     0% 92.76%     2.22MB  2.37%  main.main
+         0     0% 92.76%     2.22MB  2.37%  runtime.main
+         0     0% 92.76%     2.22MB  2.37%  testing.(*M).Run
+    1.72MB  1.84% 94.59%     1.72MB  1.84%  runtime/pprof.StartCPUProfile
+         0     0% 94.59%     1.72MB  1.84%  testing.(*M).before
+         0     0% 94.59%     1.72MB  1.84%  testing/internal/testdeps.TestDeps.StartCPUProfile
+    0.88MB  0.94% 95.53%     1.52MB  1.62%  compress/flate.NewWriter (inline)
+         0     0% 95.53%     1.52MB  1.62%  compress/gzip.(*Writer).Write
+         0     0% 95.53%     1.52MB  1.62%  runtime/pprof.(*profileBuilder).build
+         0     0% 95.53%     1.52MB  1.62%  runtime/pprof.(*profileBuilder).flush
+         0     0% 95.53%     1.52MB  1.62%  runtime/pprof.(*profileBuilder).pbSample
+    1.05MB  1.12% 96.65%     1.05MB  1.12%  runtime.allgadd
+       1MB  1.07% 97.72%        1MB  1.07%  runtime.allocm
+         0     0% 97.72%        1MB  1.07%  runtime.newm
+         0     0% 97.72%        1MB  1.07%  runtime.resetspinning
+         0     0% 97.72%        1MB  1.07%  runtime.schedule
+         0     0% 97.72%        1MB  1.07%  runtime.startm
+         0     0% 97.72%        1MB  1.07%  runtime.wakep
+    0.64MB  0.68% 98.40%     0.64MB  0.68%  compress/flate.(*compressor).init
+    0.50MB  0.54% 98.93%     0.50MB  0.54%  runtime/pprof.(*profMap).lookup
+         0     0% 98.93%     0.50MB  0.54%  runtime/pprof.(*profileBuilder).addCPUData
+         0     0% 98.93%     0.50MB  0.53%  runtime.mcall
+         0     0% 98.93%     0.50MB  0.53%  runtime.mstart
+         0     0% 98.93%     0.50MB  0.53%  runtime.mstart0
+         0     0% 98.93%     0.50MB  0.53%  runtime.mstart1
+         0     0% 98.93%     0.50MB  0.53%  runtime.park_m
+         0     0% 98.93%     0.50MB  0.53%  fmt.Fprintf
+         0     0% 98.93%     0.50MB  0.53%  fmt.newPrinter
+         0     0% 98.93%     0.50MB  0.53%  sync.(*Once).Do (inline)
+         0     0% 98.93%     0.50MB  0.53%  sync.(*Once).doSlow
+         0     0% 98.93%     0.50MB  0.53%  sync.(*Pool).Get
+         0     0% 98.93%     0.50MB  0.53%  sync.(*Pool).pin
+    0.50MB  0.53% 99.47%     0.50MB  0.53%  sync.(*Pool).pinSlow
+         0     0% 99.47%     0.50MB  0.53%  testing.(*B).Run
+         0     0% 99.47%     0.50MB  0.53%  testing.(*B).run
+         0     0% 99.47%     0.50MB  0.53%  testing.(*B).run.func1
+         0     0% 99.47%     0.50MB  0.53%  testing.runBenchmarks
+         0     0% 99.47%     0.50MB  0.53%  testing.runBenchmarks.func1
+    0.50MB  0.53%   100%     0.50MB  0.53%  compress/gzip.NewWriterLevel
+         0     0%   100%     0.50MB  0.53%  runtime/pprof.newProfileBuilder
