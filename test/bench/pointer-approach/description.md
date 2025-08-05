@@ -1,31 +1,44 @@
-## Performance Regression Report
+## 🧪 Performance Regression Report
 
-Even though the pointer-based optimization significantly improved the `getShard` function, the overall system performance **degraded**.
-
-
-### Time Per Operation
-
-| Metric  | Before      | After       | Change            |
-| ------- | ----------- | ----------- | ----------------- |
-| Time/op | 3.949 ns/op | 182.4 ns/op | **46× slower** |
-| Change  | –           | –           | **+4,521%**       |
+Despite the pointer-based optimization improving the `getShard` function in isolation, **overall system performance has regressed significantly**.
 
 
-### Iterations Achieved
+### ⏱ Time Per Operation
 
-| Metric         | Before      | After     | Change          |
-| -------------- | ----------- | --------- | --------------- |
-| Iterations     | 291,123,867 | 6,225,157 | **–97.8%**      |
-| Relative Speed | –           | –         | **\~47× fewer** |
+| Metric    | Baseline    | Optimized   | Change         |
+| --------- | ----------- | ----------- | -------------- |
+| Time/op   | 3.949 ns/op | 182.4 ns/op | **46× slower** |
+| Delta (%) | –           | –           | **+4,521%**    |
 
 
-### Diagnosis
+### 🔁 Iteration Throughput
 
-The pointer optimization caused the `getShard` function to be mostly **optimized away**, shifting the **performance bottleneck** to `retrieveFromShard`.
+| Metric         | Baseline    | Optimized | Change              |
+| -------------- | ----------- | --------- | ------------------- |
+| Iterations     | 291,123,867 | 6,225,157 | **–97.8%**          |
+| Relative Speed | –           | –         | **\~47× fewer ops** |
 
-As a result:
 
-* `retrieveFromShard` now takes **200%–300% more time**.
-* The system spends significantly more time in post-shard-retrieval logic.
-* The apparent performance loss is due to **unintended work amplification** in the slower parts of the system.
+### 🔍 Diagnosis
+
+While the pointer-based approach allowed the compiler to almost **fully optimize away `getShard`**, it also **exposed `retrieveFromShard` as the new bottleneck**. Key observations:
+
+* `retrieveFromShard` now takes **2–3× longer** per call.
+* More time is now spent in the **post-retrieval logic**, amplifying its cost.
+* The regression stems from **unintended work shifting**, where performance-critical paths were previously masked by inefficiencies in `getShard`.
+
+
+## 🔧 Code Changes
+
+No major logic changes were introduced. The only notable modification:
+
+* `getShard` now reads from a **static value** instead of a **global variable**.
+
+
+### 📉 Additional Observation
+
+Disabling `procPin` led to a dramatic slowdown.
+
+* **Atomic operations** now consume **\~70% of total execution time**, compared to **24% in the baseline**.
+* This indicates increased **CPU contention and synchronization overhead** in the optimized version.
 
