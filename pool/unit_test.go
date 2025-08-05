@@ -424,9 +424,20 @@ func TestRetrieveFromShard(t *testing.T) {
 	if success {
 		t.Error("retrieveFromShard() should return false for empty shard")
 	}
-
 	if obj != nil {
 		t.Error("retrieveFromShard() should return nil for empty shard")
+	}
+
+	// Test with populated shard
+	obj1 := pool.Get()
+	pool.Put(obj1)
+
+	obj2, success := pool.retrieveFromShard(shard)
+	if !success {
+		t.Error("retrieveFromShard() should return true for populated shard")
+	}
+	if obj2 == nil {
+		t.Error("retrieveFromShard() should return object for populated shard")
 	}
 }
 
@@ -540,6 +551,15 @@ func TestTryTakeOwnership(t *testing.T) {
 	obj := pool.tryTakeOwnership(shard)
 	if obj != nil {
 		t.Error("tryTakeOwnership() should return nil for empty shard")
+	}
+
+	// Test with populated shard
+	obj1 := pool.Get()
+	pool.Put(obj1)
+
+	obj2 := pool.tryTakeOwnership(shard)
+	if obj2 == nil {
+		t.Error("tryTakeOwnership() should return object for populated shard")
 	}
 }
 

@@ -1,2 +1,0 @@
-retrieveFromShard(shard *Shard[T, P]) got worse in comparison to the previous run. (pointer approach)
- 
