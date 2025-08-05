@@ -174,8 +174,6 @@ type GrowthPolicy struct {
 }
 ```
 
-> If the pool reaches its limit, it returns nil. To avoid this behavior, you can use GetBlock() or PutBlock(), which block until resources become available.
-
 ## Cleanup Policy
 
 If no cleanup policy is provided in the config, the zero value will be used by default, which means automatic cleanup is **disabled**.
