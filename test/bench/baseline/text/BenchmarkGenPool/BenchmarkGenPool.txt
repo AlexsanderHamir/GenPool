@@ -1,0 +1,26 @@
+goos: darwin
+goarch: arm64
+pkg: github.com/AlexsanderHamir/GenPool/test
+cpu: Apple M1
+BenchmarkGenPool-8   	291123867	         3.949 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	309236574	         3.877 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	303634376	         3.859 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	311015655	         3.871 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	311966887	         3.880 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	312011025	         3.859 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	307861071	         3.856 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	308842812	         3.852 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	308487453	         3.845 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	295460950	         3.858 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	295704492	         3.869 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	308950753	         3.886 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	311708485	         3.867 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	311697150	         3.867 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	310803362	         3.873 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	309664998	         3.880 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	310599398	         3.871 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	310893481	         3.870 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	309298046	         3.903 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGenPool-8   	312116931	         3.871 ns/op	       0 B/op	       0 allocs/op
+PASS
+ok  	github.com/AlexsanderHamir/GenPool/test	32.287s

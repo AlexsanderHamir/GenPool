@@ -314,12 +314,10 @@ func initShards[T any, P Poolable[T]](p *ShardedPool[T, P]) {
 
 // getShard returns the shard for the current goroutine.
 func (p *ShardedPool[T, P]) getShard() (*Shard[T, P], int) {
-	// Use goroutine's processor ID for shard selection
-	// This provides better locality for goroutines that frequently access the pool
-	id := runtimeProcPin()
-	runtimeProcUnpin()
-
-	return p.Shards[id%numShards], id // ensure we don't get "index out of bounds error" if number of P's changes
+	var dummy byte
+	addr := uintptr(unsafe.Pointer(&dummy))
+	id := int(addr) & (numShards - 1) // numShards must be power of 2
+	return p.Shards[id], id
 }
 
 // Get returns an object from the pool or creates a new one.
