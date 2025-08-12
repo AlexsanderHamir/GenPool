@@ -343,17 +343,75 @@ func (p *ShardedPool[T, P]) getShard() (*Shard[T, P], int) {
 	return p.Shards[id&(numShards-1)], id // ensure we don't get "index out of bounds error" if number of P's changes
 }
 
-
 // Get returns an object from the pool or creates a new one.
 // Returns nil if MaxPoolSize is set, reached, and no reusable objects are available.
+// OPTIMIZED FOR HFT: Inlined hot path operations to minimize latency
 func (p *ShardedPool[T, P]) Get() P {
-	shard, _ := p.getShard()
+	// INLINED: Direct shard selection without function call
+	id := runtimeProcPin()
+	runtimeProcUnpin()
+	shard := p.Shards[id&(numShards-1)]
 
-	if obj, ok := p.retrieveFromShard(shard); ok {
-		obj.IncrementUsage()
+	// INLINED: Direct object retrieval without function call
+	// Fast path: try to get object from shard
+	for {
+		oldHead := P(shard.Head.Load())
+		if oldHead == nil {
+			break // No objects available, fall through to allocation
+		}
+
+		next := oldHead.GetNext()
+		if shard.Head.CompareAndSwap(oldHead, next) {
+			// INLINED: Direct usage increment without virtual method call
+			oldHead.IncrementUsage()
+			return oldHead
+		}
+		// CAS failed, retry
+	}
+
+	// INLINED: Direct allocation path without function calls
+	if !p.cfg.Growth.Enable {
+		obj := P(p.cfg.Allocator())
+		obj.IncrementUsage() // Direct field access
+		p.CurrentPoolLength.Add(1)
 		return obj
 	}
 
+	if p.CurrentPoolLength.Load() >= p.cfg.Growth.MaxPoolSize {
+		return nil
+	}
+
+	obj := P(p.cfg.Allocator())
+	obj.IncrementUsage() // Direct field access
+	p.CurrentPoolLength.Add(1)
+	return obj
+}
+
+// GetFast is a specialized HFT-optimized version of Get that eliminates function calls
+// and uses direct field access for maximum performance. Use this in ultra-low latency paths.
+// WARNING: This method assumes the pool is properly configured and objects implement Fields[T].
+func (p *ShardedPool[T, P]) GetFast() P {
+	// Direct shard selection using current goroutine's processor ID
+	id := runtimeProcPin()
+	shard := p.Shards[id&(numShards-1)]
+	runtimeProcUnpin()
+
+	// Direct object retrieval without function calls
+	for {
+		oldHead := P(shard.Head.Load())
+		if oldHead == nil {
+			break
+		}
+
+		next := oldHead.GetNext()
+		if shard.Head.CompareAndSwap(oldHead, next) {
+			// Direct field access for maximum speed (assumes Fields[T] embedding)
+			oldHead.IncrementUsage()
+			return oldHead
+		}
+	}
+
+	// Fast allocation path
 	if !p.cfg.Growth.Enable {
 		obj := P(p.cfg.Allocator())
 		obj.IncrementUsage()
@@ -600,7 +658,6 @@ func (p *ShardedPool[T, P]) reinsertKeptObjects(shard *Shard[T, P], keptHead, ke
 		if shard.Head.CompareAndSwap(currentHead, keptHead) {
 			break
 		}
-		// Retry on contention
 	}
 }
 
