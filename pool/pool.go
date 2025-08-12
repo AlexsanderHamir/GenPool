@@ -346,7 +346,6 @@ func (p *ShardedPool[T, P]) getShard() (*Shard[T, P], int) {
 // Get returns an object from the pool or creates a new one.
 // Returns nil if MaxPoolSize is set, reached, and no reusable objects are available.
 func (p *ShardedPool[T, P]) Get() P {
-
 	// INLINED: Direct shard selection without function call
 	id := runtimeProcPin()
 	runtimeProcUnpin()
