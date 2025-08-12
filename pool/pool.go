@@ -327,7 +327,6 @@ func (p *ShardedPool[T, P]) getShard() (*Shard[T, P], int) {
 func (p *ShardedPool[T, P]) Get() P {
 	shard, _ := p.getShard()
 
-	// Try to get an object from the shard
 	if obj, ok := p.retrieveFromShard(shard); ok {
 		obj.IncrementUsage()
 		return obj
@@ -379,6 +378,7 @@ func (p *ShardedPool[T, P]) GetBlock() P {
 
 // PutBlock returns an object to the pool and signals a blocked goroutine, if any.
 // It attempts to atomically insert the object at the head of the most blocked shard's list.
+// Only works if its returned within the same goroutine.
 func (p *ShardedPool[T, P]) PutBlock(obj P) {
 	p.cfg.Cleaner(obj)
 	shard := p.getMostBlockedShard()
