@@ -219,7 +219,7 @@ type Shard[T any, P Poolable[T]] struct {
 	Mutex *sync.Mutex       // 8 bytes
 
 	// Padding to make the struct 64 bytes in total
-	_ [64 - unsafe.Sizeof(atomic.Pointer[T]{}) -
+	_ [128 - unsafe.Sizeof(atomic.Pointer[T]{}) -
 		unsafe.Sizeof((*sync.Cond)(nil)) -
 		unsafe.Sizeof((*sync.Mutex)(nil))]byte
 }
@@ -345,8 +345,8 @@ func (p *ShardedPool[T, P]) getShard() (*Shard[T, P], int) {
 
 // Get returns an object from the pool or creates a new one.
 // Returns nil if MaxPoolSize is set, reached, and no reusable objects are available.
-// OPTIMIZED FOR HFT: Inlined hot path operations to minimize latency
 func (p *ShardedPool[T, P]) Get() P {
+
 	// INLINED: Direct shard selection without function call
 	id := runtimeProcPin()
 	runtimeProcUnpin()
@@ -383,48 +383,6 @@ func (p *ShardedPool[T, P]) Get() P {
 
 	obj := P(p.cfg.Allocator())
 	obj.IncrementUsage() // Direct field access
-	p.CurrentPoolLength.Add(1)
-	return obj
-}
-
-// GetFast is a specialized HFT-optimized version of Get that eliminates function calls
-// and uses direct field access for maximum performance. Use this in ultra-low latency paths.
-// WARNING: This method assumes the pool is properly configured and objects implement Fields[T].
-func (p *ShardedPool[T, P]) GetFast() P {
-	// Direct shard selection using current goroutine's processor ID
-	id := runtimeProcPin()
-	shard := p.Shards[id&(numShards-1)]
-	runtimeProcUnpin()
-
-	// Direct object retrieval without function calls
-	for {
-		oldHead := P(shard.Head.Load())
-		if oldHead == nil {
-			break
-		}
-
-		next := oldHead.GetNext()
-		if shard.Head.CompareAndSwap(oldHead, next) {
-			// Direct field access for maximum speed (assumes Fields[T] embedding)
-			oldHead.IncrementUsage()
-			return oldHead
-		}
-	}
-
-	// Fast allocation path
-	if !p.cfg.Growth.Enable {
-		obj := P(p.cfg.Allocator())
-		obj.IncrementUsage()
-		p.CurrentPoolLength.Add(1)
-		return obj
-	}
-
-	if p.CurrentPoolLength.Load() >= p.cfg.Growth.MaxPoolSize {
-		return nil
-	}
-
-	obj := P(p.cfg.Allocator())
-	obj.IncrementUsage()
 	p.CurrentPoolLength.Add(1)
 	return obj
 }
@@ -496,7 +454,10 @@ func (p *ShardedPool[T, P]) GetN(n int) []P {
 // Put returns an object to the pool.
 func (p *ShardedPool[T, P]) Put(obj P) {
 	p.cfg.Cleaner(obj)
-	shard, _ := p.getShard()
+
+	id := runtimeProcPin()
+	runtimeProcUnpin()
+	shard := p.Shards[id&(numShards-1)]
 
 	for {
 		oldHead := P(shard.Head.Load())
