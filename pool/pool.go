@@ -340,8 +340,9 @@ func (p *ShardedPool[T, P]) getShard() (*Shard[T, P], int) {
 	id := runtimeProcPin()
 	runtimeProcUnpin()
 
-	return p.Shards[id%numShards], id // ensure we don't get "index out of bounds error" if number of P's changes
+	return p.Shards[id&(numShards-1)], id // ensure we don't get "index out of bounds error" if number of P's changes
 }
+
 
 // Get returns an object from the pool or creates a new one.
 // Returns nil if MaxPoolSize is set, reached, and no reusable objects are available.
@@ -360,9 +361,9 @@ func (p *ShardedPool[T, P]) Get() P {
 		return obj
 	}
 
-if p.CurrentPoolLength.Load() >= p.cfg.Growth.MaxPoolSize {
-	return nil
-}
+	if p.CurrentPoolLength.Load() >= p.cfg.Growth.MaxPoolSize {
+		return nil
+	}
 
 	obj := P(p.cfg.Allocator())
 	obj.IncrementUsage()
