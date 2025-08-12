@@ -48,13 +48,34 @@ var (
 // numShards determines how many shards the pool will use based on available CPU resources.
 // It uses GOMAXPROCS(0) to detect how many logical CPUs the Go scheduler is using.
 // The number is clamped between 8 and 128 to avoid poor performance due to under- or over-sharding.
+// The value is always a power of two for optimal performance with bitwise operations.
 //
 // NOTE: This value is computed once at startup.
 // If your application starts with a small CPU quota (e.g., 2 cores in a container)
 // and later scales up to a higher CPU count (e.g., 64 cores),
 // numShards will NOT automatically adjust. This could lead to suboptimal performance
 // because the pool may not fully utilize the additional cores.
-var numShards = min(max(runtime.GOMAXPROCS(0), 8), 128)
+var numShards = nextPowerOfTwo(min(max(runtime.GOMAXPROCS(0), 8), 128))
+
+// nextPowerOfTwo returns the smallest power of two that is greater than or equal to n.
+// This ensures optimal performance for bitwise operations used in shard selection.
+func nextPowerOfTwo(n int) int {
+	if n <= 0 {
+		return 1
+	}
+
+	// If n is already a power of two, return it
+	if n&(n-1) == 0 {
+		return n
+	}
+
+	// Find the next power of two
+	power := 1
+	for power < n {
+		power <<= 1
+	}
+	return power
+}
 
 // CleanupPolicy defines how the pool should clean up unused objects.
 type CleanupPolicy struct {
