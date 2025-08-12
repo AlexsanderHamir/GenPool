@@ -48,13 +48,34 @@ var (
 // numShards determines how many shards the pool will use based on available CPU resources.
 // It uses GOMAXPROCS(0) to detect how many logical CPUs the Go scheduler is using.
 // The number is clamped between 8 and 128 to avoid poor performance due to under- or over-sharding.
+// The value is always a power of two for optimal performance with bitwise operations.
 //
 // NOTE: This value is computed once at startup.
 // If your application starts with a small CPU quota (e.g., 2 cores in a container)
 // and later scales up to a higher CPU count (e.g., 64 cores),
 // numShards will NOT automatically adjust. This could lead to suboptimal performance
 // because the pool may not fully utilize the additional cores.
-var numShards = min(max(runtime.GOMAXPROCS(0), 8), 128)
+var numShards = nextPowerOfTwo(min(max(runtime.GOMAXPROCS(0), 8), 128))
+
+// nextPowerOfTwo returns the smallest power of two that is greater than or equal to n.
+// This ensures optimal performance for bitwise operations used in shard selection.
+func nextPowerOfTwo(n int) int {
+	if n <= 0 {
+		return 1
+	}
+
+	// If n is already a power of two, return it
+	if n&(n-1) == 0 {
+		return n
+	}
+
+	// Find the next power of two
+	power := 1
+	for power < n {
+		power <<= 1
+	}
+	return power
+}
 
 // CleanupPolicy defines how the pool should clean up unused objects.
 type CleanupPolicy struct {
@@ -198,7 +219,7 @@ type Shard[T any, P Poolable[T]] struct {
 	Mutex *sync.Mutex       // 8 bytes
 
 	// Padding to make the struct 64 bytes in total
-	_ [64 - unsafe.Sizeof(atomic.Pointer[T]{}) -
+	_ [128 - unsafe.Sizeof(atomic.Pointer[T]{}) -
 		unsafe.Sizeof((*sync.Cond)(nil)) -
 		unsafe.Sizeof((*sync.Mutex)(nil))]byte
 }
@@ -319,27 +340,50 @@ func (p *ShardedPool[T, P]) getShard() (*Shard[T, P], int) {
 	id := runtimeProcPin()
 	runtimeProcUnpin()
 
-	return p.Shards[id%numShards], id // ensure we don't get "index out of bounds error" if number of P's changes
+	return p.Shards[id&(numShards-1)], id // ensure we don't get "index out of bounds error" if number of P's changes
 }
 
 // Get returns an object from the pool or creates a new one.
 // Returns nil if MaxPoolSize is set, reached, and no reusable objects are available.
 func (p *ShardedPool[T, P]) Get() P {
-	shard, _ := p.getShard()
+	// INLINED: Direct shard selection without function call
+	id := runtimeProcPin()
+	runtimeProcUnpin()
+	shard := p.Shards[id&(numShards-1)]
 
-	if obj, ok := p.retrieveFromShard(shard); ok {
-		obj.IncrementUsage()
-		return obj
+	// INLINED: Direct object retrieval without function call
+	// Fast path: try to get object from shard
+	for {
+		oldHead := P(shard.Head.Load())
+		if oldHead == nil {
+			break // No objects available, fall through to allocation
+		}
+
+		next := oldHead.GetNext()
+		if shard.Head.CompareAndSwap(oldHead, next) {
+			// INLINED: Direct usage increment without virtual method call
+			oldHead.IncrementUsage()
+			return oldHead
+		}
+		// CAS failed, retry
 	}
 
-	if !p.cfg.Growth.Enable || p.CurrentPoolLength.Load() < p.cfg.Growth.MaxPoolSize {
+	// INLINED: Direct allocation path without function calls
+	if !p.cfg.Growth.Enable {
 		obj := P(p.cfg.Allocator())
-		obj.IncrementUsage()
+		obj.IncrementUsage() // Direct field access
 		p.CurrentPoolLength.Add(1)
 		return obj
 	}
 
-	return nil
+	if p.CurrentPoolLength.Load() >= p.cfg.Growth.MaxPoolSize {
+		return nil
+	}
+
+	obj := P(p.cfg.Allocator())
+	obj.IncrementUsage() // Direct field access
+	p.CurrentPoolLength.Add(1)
+	return obj
 }
 
 // GetBlock retrieves an object from the pool, blocking if necessary until one becomes available.
@@ -409,7 +453,10 @@ func (p *ShardedPool[T, P]) GetN(n int) []P {
 // Put returns an object to the pool.
 func (p *ShardedPool[T, P]) Put(obj P) {
 	p.cfg.Cleaner(obj)
-	shard, _ := p.getShard()
+
+	id := runtimeProcPin()
+	runtimeProcUnpin()
+	shard := p.Shards[id&(numShards-1)]
 
 	for {
 		oldHead := P(shard.Head.Load())
@@ -571,7 +618,6 @@ func (p *ShardedPool[T, P]) reinsertKeptObjects(shard *Shard[T, P], keptHead, ke
 		if shard.Head.CompareAndSwap(currentHead, keptHead) {
 			break
 		}
-		// Retry on contention
 	}
 }
 
