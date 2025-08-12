@@ -353,14 +353,21 @@ func (p *ShardedPool[T, P]) Get() P {
 		return obj
 	}
 
-	if !p.cfg.Growth.Enable || p.CurrentPoolLength.Load() < p.cfg.Growth.MaxPoolSize {
+	if !p.cfg.Growth.Enable {
 		obj := P(p.cfg.Allocator())
 		obj.IncrementUsage()
 		p.CurrentPoolLength.Add(1)
 		return obj
 	}
 
+if p.CurrentPoolLength.Load() >= p.cfg.Growth.MaxPoolSize {
 	return nil
+}
+
+	obj := P(p.cfg.Allocator())
+	obj.IncrementUsage()
+	p.CurrentPoolLength.Add(1)
+	return obj
 }
 
 // GetBlock retrieves an object from the pool, blocking if necessary until one becomes available.
