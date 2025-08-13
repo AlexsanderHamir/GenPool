@@ -45,31 +45,11 @@ var (
 	GcAggressive GcLevel = "aggressive"
 )
 
-// Pre-computed values for maximum performance
+// The number of shards is tied to GOMAXPROCS (max OS threads running Go code in parallel).
+// To reduce sharding, adjust GOMAXPROCS via runtime.GOMAXPROCS(n) before creating the pool.
 var (
-	numShards = nextPowerOfTwo(min(max(runtime.GOMAXPROCS(0), 8), 128))
-	shardMask = numShards - 1 // Pre-computed mask for bitwise AND
+	numShards = runtime.GOMAXPROCS(0)
 )
-
-// nextPowerOfTwo returns the smallest power of two that is greater than or equal to n.
-// This ensures optimal performance for bitwise operations used in shard selection.
-func nextPowerOfTwo(n int) int {
-	if n <= 0 {
-		return 1
-	}
-
-	// If n is already a power of two, return it
-	if n&(n-1) == 0 {
-		return n
-	}
-
-	// Find the next power of two
-	power := 1
-	for power < n {
-		power <<= 1
-	}
-	return power
-}
 
 // CleanupPolicy defines how the pool should clean up unused objects.
 type CleanupPolicy struct {
@@ -181,9 +161,6 @@ type Config[T any, P Poolable[T]] struct {
 
 	// Cleaner is the function to clean objects before returning them to the pool
 	Cleaner Cleaner[T]
-
-	// ShardNumOverride allows you to change [numShards] if its necessary for your use case
-	ShardNumOverride int
 }
 
 // GrowthPolicy controls how the pool is allowed to grow.
@@ -270,7 +247,7 @@ func NewPoolWithConfig[T any, P Poolable[T]](cfg Config[T, P]) (*ShardedPool[T, 
 		cfg:           cfg,
 		stopClean:     make(chan struct{}),
 		blockedShards: map[int]*atomic.Int64{},
-		Shards:        make([]*Shard[T, P], getShardCount(cfg)),
+		Shards:        make([]*Shard[T, P], numShards),
 	}
 
 	initShards(pool)
@@ -306,15 +283,6 @@ func validateCleanupConfig[T any, P Poolable[T]](cfg Config[T, P]) error {
 	return nil
 }
 
-func getShardCount[T any, P Poolable[T]](cfg Config[T, P]) int {
-	if cfg.ShardNumOverride > 0 {
-		numShards = cfg.ShardNumOverride
-		shardMask = numShards - 1
-		return numShards
-	}
-	return numShards
-}
-
 func initShards[T any, P Poolable[T]](p *ShardedPool[T, P]) {
 	for i := range p.Shards {
 		mu := &sync.Mutex{}
@@ -330,28 +298,16 @@ func initShards[T any, P Poolable[T]](p *ShardedPool[T, P]) {
 	}
 }
 
-// getShard returns the shard for the current goroutine.
-func (p *ShardedPool[T, P]) getShard() (*Shard[T, P], int) {
-	// Use goroutine's processor ID for shard selection
-	// This provides better locality for goroutines that frequently access the pool
-	id := runtimeProcPin()
-	runtimeProcUnpin()
-
-	return p.Shards[id&(shardMask)], id
-}
-
 // Get returns an object from the pool or creates a new one.
 // Returns nil if MaxPoolSize is set, reached, and no reusable objects are available.
 func (p *ShardedPool[T, P]) Get() P {
-	// INLINED: Direct shard selection without function call
-	id := runtimeProcPin()
-	shard := p.Shards[id&shardMask]
+	shard := p.Shards[runtimeProcPin()]
 	runtimeProcUnpin()
 
 	// Fast path: check single object first
-	if single := P(shard.Single.Load()); single != nil {
+	if single := shard.Single.Load(); single != nil {
 		if shard.Single.CompareAndSwap(single, nil) {
-			single.IncrementUsage()
+			P(single).IncrementUsage()
 			return single
 		}
 	}
@@ -393,7 +349,9 @@ func (p *ShardedPool[T, P]) Get() P {
 // It first attempts to reuse an object from the shard, then allocates a new one if the pool isn't full.
 // If the pool has reached its maximum size, it blocks until another goroutine puts an object back.
 func (p *ShardedPool[T, P]) GetBlock() P {
-	shard, shardID := p.getShard()
+	shardID := runtimeProcPin()
+	shard := p.Shards[shardID]
+	runtimeProcUnpin()
 
 	// Try fast path
 	if obj, ok := p.retrieveFromShard(shard); ok {
@@ -457,8 +415,7 @@ func (p *ShardedPool[T, P]) GetN(n int) []P {
 func (p *ShardedPool[T, P]) Put(obj P) {
 	p.cfg.Cleaner(obj)
 
-	id := runtimeProcPin()
-	shard := p.Shards[id&shardMask]
+	shard := p.Shards[runtimeProcPin()]
 	runtimeProcUnpin()
 
 	// Fast path: try single object first
@@ -466,16 +423,8 @@ func (p *ShardedPool[T, P]) Put(obj P) {
 		return
 	}
 
-	// Single CAS attempt for the common case
-	oldHead := P(shard.Head.Load())
-	if shard.Head.CompareAndSwap(oldHead, obj) {
-		obj.SetNext(oldHead)
-		return
-	}
-
-	// Fallback to retry loop only if needed
 	for {
-		oldHead = P(shard.Head.Load())
+		oldHead := P(shard.Head.Load())
 		if shard.Head.CompareAndSwap(oldHead, obj) {
 			obj.SetNext(oldHead)
 			return
