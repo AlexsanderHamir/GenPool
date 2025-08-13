@@ -45,20 +45,11 @@ var (
 	GcAggressive GcLevel = "aggressive"
 )
 
-// numShards determines how many shards the pool will use based on available CPU resources.
-// It uses GOMAXPROCS(0) to detect how many logical CPUs the Go scheduler is using.
-// The number is clamped between 8 and 128 to avoid poor performance due to under- or over-sharding.
-// The value is always a power of two for optimal performance with bitwise operations.
-//
-// NOTE: This value is computed once at startup.
-// If your application starts with a small CPU quota (e.g., 2 cores in a container)
-// and later scales up to a higher CPU count (e.g., 64 cores),
-// numShards will NOT automatically adjust. This could lead to suboptimal performance
-// because the pool may not fully utilize the additional cores.
-var numShards = nextPowerOfTwo(min(max(runtime.GOMAXPROCS(0), 8), 128))
-
-// Only supposed to be used inside [getShard()]
-var numShardsStatic = numShards - 1
+// Pre-computed values for maximum performance
+var (
+	numShards = nextPowerOfTwo(min(max(runtime.GOMAXPROCS(0), 8), 128))
+	shardMask = numShards - 1 // Pre-computed mask for bitwise AND
+)
 
 // nextPowerOfTwo returns the smallest power of two that is greater than or equal to n.
 // This ensures optimal performance for bitwise operations used in shard selection.
