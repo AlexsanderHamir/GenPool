@@ -154,10 +154,6 @@ func main() {
 3. **Set Cleaner Once**
    Provide a `cleaner` function to automatically reset or sanitize objects before reuse—no manual cleanup required.
 
-4. **Shards Control**
-   Configure the number of shards in the pool.
-   → Sharding helps distribute load and significantly improves performance under heavy concurrency.
-
 ## Growth Policy
 
 If no growth policy is provided, the pool will grow **indefinitely**. In this case, any resource control will rely entirely on the `CleanupPolicy`.
