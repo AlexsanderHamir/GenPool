@@ -337,7 +337,7 @@ func (p *ShardedPool[T, P]) getShard() (*Shard[T, P], int) {
 	id := runtimeProcPin()
 	runtimeProcUnpin()
 
-	return p.Shards[id&(shardMask)], id // ensure we don't get "index out of bounds error" if number of P's changes
+	return p.Shards[id&(shardMask)], id
 }
 
 // Get returns an object from the pool or creates a new one.
@@ -345,8 +345,8 @@ func (p *ShardedPool[T, P]) getShard() (*Shard[T, P], int) {
 func (p *ShardedPool[T, P]) Get() P {
 	// INLINED: Direct shard selection without function call
 	id := runtimeProcPin()
+	shard := p.Shards[id&shardMask]
 	runtimeProcUnpin()
-	shard := p.Shards[id&(numShards-1)]
 
 	// Fast path: check single object first
 	if single := P(shard.Single.Load()); single != nil {
@@ -356,7 +356,6 @@ func (p *ShardedPool[T, P]) Get() P {
 		}
 	}
 
-	// INLINED: Direct object retrieval without function call
 	// Fast path: try to get object from shard
 	for {
 		oldHead := P(shard.Head.Load())
@@ -366,17 +365,16 @@ func (p *ShardedPool[T, P]) Get() P {
 
 		next := oldHead.GetNext()
 		if shard.Head.CompareAndSwap(oldHead, next) {
-			// INLINED: Direct usage increment without virtual method call
 			oldHead.IncrementUsage()
 			return oldHead
 		}
 		// CAS failed, retry
 	}
 
-	// INLINED: Direct allocation path without function calls
+	// Direct allocation path
 	if !p.cfg.Growth.Enable {
 		obj := P(p.cfg.Allocator())
-		obj.IncrementUsage() // Direct field access
+		obj.IncrementUsage()
 		p.CurrentPoolLength.Add(1)
 		return obj
 	}
@@ -386,7 +384,7 @@ func (p *ShardedPool[T, P]) Get() P {
 	}
 
 	obj := P(p.cfg.Allocator())
-	obj.IncrementUsage() // Direct field access
+	obj.IncrementUsage()
 	p.CurrentPoolLength.Add(1)
 	return obj
 }
@@ -460,17 +458,24 @@ func (p *ShardedPool[T, P]) Put(obj P) {
 	p.cfg.Cleaner(obj)
 
 	id := runtimeProcPin()
+	shard := p.Shards[id&shardMask]
 	runtimeProcUnpin()
-	shard := p.Shards[id&(numShards-1)]
 
 	// Fast path: try single object first
 	if shard.Single.CompareAndSwap(nil, obj) {
 		return
 	}
 
-	for {
-		oldHead := P(shard.Head.Load())
+	// Single CAS attempt for the common case
+	oldHead := P(shard.Head.Load())
+	if shard.Head.CompareAndSwap(oldHead, obj) {
+		obj.SetNext(oldHead)
+		return
+	}
 
+	// Fallback to retry loop only if needed
+	for {
+		oldHead = P(shard.Head.Load())
 		if shard.Head.CompareAndSwap(oldHead, obj) {
 			obj.SetNext(oldHead)
 			return
