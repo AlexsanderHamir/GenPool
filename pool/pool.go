@@ -308,7 +308,7 @@ func validateCleanupConfig[T any, P Poolable[T]](cfg Config[T, P]) error {
 func getShardCount[T any, P Poolable[T]](cfg Config[T, P]) int {
 	if cfg.ShardNumOverride > 0 {
 		numShards = cfg.ShardNumOverride
-		numShardsStatic = numShards - 1
+		shardMask = numShards - 1
 		return numShards
 	}
 	return numShards
@@ -335,7 +335,7 @@ func (p *ShardedPool[T, P]) getShard() (*Shard[T, P], int) {
 	id := runtimeProcPin()
 	runtimeProcUnpin()
 
-	return p.Shards[id&(numShardsStatic)], id // ensure we don't get "index out of bounds error" if number of P's changes
+	return p.Shards[id&(shardMask)], id // ensure we don't get "index out of bounds error" if number of P's changes
 }
 
 // Get returns an object from the pool or creates a new one.
