@@ -208,12 +208,13 @@ func DefaultConfig[T any, P Poolable[T]](allocator Allocator[T], cleaner Cleaner
 // Shard represents a single shard in the pool.
 // It is 64 bytes in total to avoid false sharing across CPU cache lines.
 type Shard[T any, P Poolable[T]] struct {
-	Head  atomic.Pointer[T] // 8 bytes
-	Cond  *sync.Cond        // 8 bytes
-	Mutex *sync.Mutex       // 8 bytes
+	Head   atomic.Pointer[T] // 8 bytes
+	Single atomic.Pointer[T] // 8 bytes - fast path for single object
+	Cond   *sync.Cond        // 8 bytes
+	Mutex  *sync.Mutex       // 8 bytes
 
 	// Padding to make the struct 64 bytes in total
-	_ [128 - unsafe.Sizeof(atomic.Pointer[T]{}) -
+	_ [128 - unsafe.Sizeof(atomic.Pointer[T]{})*2 -
 		unsafe.Sizeof((*sync.Cond)(nil)) -
 		unsafe.Sizeof((*sync.Mutex)(nil))]byte
 }
@@ -322,6 +323,7 @@ func initShards[T any, P Poolable[T]](p *ShardedPool[T, P]) {
 			Cond:  sync.NewCond(mu),
 		}
 		shard.Head.Store(nil)
+		shard.Single.Store(nil)
 
 		p.Shards[i] = shard
 		p.blockedShards[i] = new(atomic.Int64)
@@ -345,6 +347,14 @@ func (p *ShardedPool[T, P]) Get() P {
 	id := runtimeProcPin()
 	runtimeProcUnpin()
 	shard := p.Shards[id&(numShards-1)]
+
+	// Fast path: check single object first
+	if single := P(shard.Single.Load()); single != nil {
+		if shard.Single.CompareAndSwap(single, nil) {
+			single.IncrementUsage()
+			return single
+		}
+	}
 
 	// INLINED: Direct object retrieval without function call
 	// Fast path: try to get object from shard
@@ -452,6 +462,11 @@ func (p *ShardedPool[T, P]) Put(obj P) {
 	id := runtimeProcPin()
 	runtimeProcUnpin()
 	shard := p.Shards[id&(numShards-1)]
+
+	// Fast path: try single object first
+	if shard.Single.CompareAndSwap(nil, obj) {
+		return
+	}
 
 	for {
 		oldHead := P(shard.Head.Load())
