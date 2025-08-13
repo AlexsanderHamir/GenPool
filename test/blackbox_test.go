@@ -60,15 +60,11 @@ func TestPoolRetrieveOrCreate(t *testing.T) {
 	}
 }
 
-func createConfig[T any, P pool.Poolable[T]](interval time.Duration, minUsage int64, override int) *pool.Config[TestObject, *TestObject] {
+func createConfig[T any, P pool.Poolable[T]](interval time.Duration, minUsage int64) *pool.Config[TestObject, *TestObject] {
 	cfg := pool.DefaultConfig(testAllocator, testCleaner)
 	cfg.Cleanup.Enabled = true
 	cfg.Cleanup.Interval = interval * time.Millisecond
 	cfg.Cleanup.MinUsageCount = minUsage
-
-	if override > 0 {
-		cfg.ShardNumOverride = override
-	}
 
 	return &cfg
 }
@@ -76,7 +72,7 @@ func createConfig[T any, P pool.Poolable[T]](interval time.Duration, minUsage in
 func TestPoolCleanupUsageCount(t *testing.T) {
 
 	t.Run("CleanupSuccess", func(t *testing.T) {
-		cfg := createConfig[TestObject](100, 2, 0)
+		cfg := createConfig[TestObject](100, 2)
 		p, err := pool.NewPoolWithConfig(*cfg)
 		if err != nil {
 			t.Fatal(err)
@@ -96,7 +92,7 @@ func TestPoolCleanupUsageCount(t *testing.T) {
 	})
 
 	t.Run("CleanupFailure", func(t *testing.T) {
-		cfg := createConfig[TestObject](1000, 2, 1)
+		cfg := createConfig[TestObject](1000, 2)
 		p, err := pool.NewPoolWithConfig(*cfg)
 		if err != nil {
 			t.Fatal(err)
