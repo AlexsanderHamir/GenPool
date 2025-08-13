@@ -57,6 +57,9 @@ var (
 // because the pool may not fully utilize the additional cores.
 var numShards = nextPowerOfTwo(min(max(runtime.GOMAXPROCS(0), 8), 128))
 
+// Only supposed to be used inside [getShard()]
+var numShardsStatic = numShards - 1
+
 // nextPowerOfTwo returns the smallest power of two that is greater than or equal to n.
 // This ensures optimal performance for bitwise operations used in shard selection.
 func nextPowerOfTwo(n int) int {
@@ -314,6 +317,7 @@ func validateCleanupConfig[T any, P Poolable[T]](cfg Config[T, P]) error {
 func getShardCount[T any, P Poolable[T]](cfg Config[T, P]) int {
 	if cfg.ShardNumOverride > 0 {
 		numShards = cfg.ShardNumOverride
+		numShardsStatic = numShards - 1
 		return numShards
 	}
 	return numShards
@@ -340,7 +344,7 @@ func (p *ShardedPool[T, P]) getShard() (*Shard[T, P], int) {
 	id := runtimeProcPin()
 	runtimeProcUnpin()
 
-	return p.Shards[id&(numShards-1)], id // ensure we don't get "index out of bounds error" if number of P's changes
+	return p.Shards[id&(numShardsStatic)], id // ensure we don't get "index out of bounds error" if number of P's changes
 }
 
 // Get returns an object from the pool or creates a new one.
