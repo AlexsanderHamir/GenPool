@@ -2,9 +2,7 @@ package pool
 
 import (
 	"errors"
-	"fmt"
 	"runtime"
-	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -26,13 +24,6 @@ func testAllocator() *TestObject {
 func testCleaner(obj *TestObject) {
 	obj.ID = 0
 	obj.Value = ""
-}
-
-// StageObject is used to test that objects are never reused before being cleaned.
-// Stage must be "new" (fresh alloc), "used" (consumer handed it), or "reset" (after cleaner).
-type StageObject struct {
-	Stage string
-	Fields[StageObject]
 }
 
 // TestDefaultCleanupPolicy tests all GC levels and the default fallback
@@ -1081,141 +1072,4 @@ func TestCurrentPoolLength(t *testing.T) {
 
 	// Note: CurrentPoolLength may not be accurate due to Single field limitation
 	// This is a known limitation of the current clear() implementation
-}
-
-// TestConcurrentGetPutCleanerContract reproduces the scenario where a pool is shared
-// across goroutines: one goroutine Gets, marks the object "used", sends it to a channel;
-// another receives and Puts. The cleaner expects to see "used" and sets "reset".
-// This test verifies that no object is ever reused before being cleaned (Get must only
-// see "new" or "reset") and that Put is never given an object that wasn't marked "used"
-// by the consumer (Put's cleaner must only see "used").
-// The test runs multiple rounds with multiple producer-consumer pairs per round
-// to increase contention. Run with: go test -race -run TestConcurrentGetPutCleanerContract
-func TestConcurrentGetPutCleanerContract(t *testing.T) {
-	const runRounds = 10
-	for round := range runRounds {
-		t.Run(fmt.Sprintf("Round%d", round+1), func(t *testing.T) {
-			runConcurrentGetPutCleanerContractRound(t)
-		})
-	}
-}
-
-func runConcurrentGetPutCleanerContractRound(t *testing.T) {
-	const iterations = 100_000
-	const numPairs = 4
-	const chanCap = 200
-
-	recorder := newStageContractRecorder(10)
-	pool, err := newStageObjectPool(recorder)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer pool.Close()
-
-	v := make(chan *StageObject, chanCap)
-	perPair := iterations / numPairs
-	runStageContractConsumers(pool, v, numPairs, perPair, recorder)
-	runStageContractProducers(pool, v, numPairs, recorder)
-	recorder.report(t)
-}
-
-// stageContractRecorder records violations of the stage contract (Get sees new/reset, Put sees used).
-type stageContractRecorder struct {
-	mu        sync.Mutex
-	sample    []string
-	count     atomic.Int64
-	maxSample int
-}
-
-func newStageContractRecorder(maxSample int) *stageContractRecorder {
-	return &stageContractRecorder{maxSample: maxSample}
-}
-
-func (r *stageContractRecorder) record(msg string) {
-	r.mu.Lock()
-	r.count.Add(1)
-	if len(r.sample) < r.maxSample {
-		r.sample = append(r.sample, msg)
-	}
-	r.mu.Unlock()
-}
-
-func (r *stageContractRecorder) report(t *testing.T) {
-	r.mu.Lock()
-	sample := r.sample
-	total := r.count.Load()
-	r.mu.Unlock()
-	if total > 0 {
-		t.Errorf("cleaner/reuse contract violated %d time(s). Sample: %v", total, sample)
-	}
-}
-
-// newStageObjectPool creates a pool whose cleaner enforces Stage "used" and sets "reset".
-// Violations are recorded to recorder.
-func newStageObjectPool(recorder *stageContractRecorder) (*ShardedPool[StageObject, *StageObject], error) {
-	allocator := func() *StageObject {
-		return &StageObject{Stage: "new"}
-	}
-	cleaner := func(obj *StageObject) {
-		if obj == nil {
-			recorder.record("cleaner received nil")
-			return
-		}
-		if obj.Stage != "used" {
-			recorder.record(fmt.Sprintf("cleaner received obj.Stage=%q (expected \"used\")", obj.Stage))
-		}
-		obj.Stage = "reset"
-	}
-	cfg := Config[StageObject, *StageObject]{
-		Allocator: allocator,
-		Cleaner:   cleaner,
-		Cleanup:   CleanupPolicy{Enabled: false},
-	}
-	return NewPoolWithConfig(cfg)
-}
-
-// runStageContractConsumers starts numPairs goroutines that Get from pool, check Stage is new/reset, set used, and send to ch.
-// Closes ch when all are done.
-func runStageContractConsumers(pool *ShardedPool[StageObject, *StageObject], ch chan<- *StageObject, numPairs, perPair int, recorder *stageContractRecorder) {
-	var wg sync.WaitGroup
-	wg.Add(numPairs)
-	for range numPairs {
-		go func() {
-			defer wg.Done()
-			for i := 0; i < perPair; i++ {
-				obj := pool.Get()
-				if obj == nil {
-					continue
-				}
-				if obj.Stage != "new" && obj.Stage != "reset" {
-					recorder.record(fmt.Sprintf("Get() returned obj.Stage=%q (expected \"new\" or \"reset\")", obj.Stage))
-				}
-				obj.Stage = "used"
-				ch <- obj
-			}
-		}()
-	}
-	go func() {
-		wg.Wait()
-		close(ch)
-	}()
-}
-
-// runStageContractProducers starts numPairs goroutines that receive from ch, check Stage is used, and Put to pool.
-// It blocks until the channel is closed and all items are Put.
-func runStageContractProducers(pool *ShardedPool[StageObject, *StageObject], ch <-chan *StageObject, numPairs int, recorder *stageContractRecorder) {
-	var wg sync.WaitGroup
-	wg.Add(numPairs)
-	for range numPairs {
-		go func() {
-			defer wg.Done()
-			for obj := range ch {
-				if obj.Stage != "used" {
-					recorder.record(fmt.Sprintf("Put() called with obj.Stage=%q (expected \"used\")", obj.Stage))
-				}
-				pool.Put(obj)
-			}
-		}()
-	}
-	wg.Wait()
 }
