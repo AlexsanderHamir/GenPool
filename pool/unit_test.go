@@ -3,6 +3,7 @@ package pool
 import (
 	"errors"
 	"runtime"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -249,6 +250,16 @@ func TestNewPoolWithConfig(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "NumShardsNegative",
+			cfg: Config[TestObject, *TestObject]{
+				Allocator: testAllocator,
+				Cleaner:   testCleaner,
+				NumShards: -1,
+				Cleanup:   CleanupPolicy{},
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -439,6 +450,83 @@ func TestCleanupShard(t *testing.T) {
 	pool.cleanupShard(shard)
 }
 
+// TestCleanupShardReinsert covers cleanupShard when filter keeps objects (keptHead != nil).
+func TestCleanupShardReinsert(t *testing.T) {
+	cfg := DefaultConfig(testAllocator, testCleaner)
+	cfg.NumShards = 1
+	cfg.Cleanup.Enabled = false
+	pool, err := NewPoolWithConfig(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+
+	o1, o2 := pool.Get(), pool.Get()
+	pool.Put(o1) // Single = o1
+	pool.Put(o2) // Head = o2
+	pool.cfg.Cleanup.MinUsageCount = 1
+	pool.cleanupShard(pool.Shards[0])
+}
+
+// TestTryTakeOwnershipContention runs tryTakeOwnership while another goroutine changes the shard head so CAS can fail.
+func TestTryTakeOwnershipContention(t *testing.T) {
+	cfg := DefaultConfig(testAllocator, testCleaner)
+	cfg.NumShards = 1
+	cfg.Cleanup.Enabled = false
+	pool, err := NewPoolWithConfig(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+
+	obj := pool.Get()
+	pool.Put(obj)
+	shard := pool.Shards[0]
+
+	done := make(chan struct{})
+	go func() {
+		for i := 0; i < 500; i++ {
+			shard.Head.Store(obj)
+			shard.Head.Store(nil)
+			runtime.Gosched()
+		}
+		close(done)
+	}()
+	for i := 0; i < 500; i++ {
+		pool.tryTakeOwnership(shard)
+		runtime.Gosched()
+	}
+	<-done
+}
+
+// TestGetConcurrentRaces runs concurrent Get/Put to hit Single CAS fail and Head loop retry paths.
+func TestGetConcurrentRaces(t *testing.T) {
+	cfg := DefaultConfig(testAllocator, testCleaner)
+	cfg.NumShards = 1
+	cfg.Cleanup.Enabled = false
+	pool, err := NewPoolWithConfig(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+
+	const rounds = 200
+	var wg sync.WaitGroup
+	for i := 0; i < 4; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < rounds; j++ {
+				o := pool.Get()
+				if o != nil {
+					pool.Put(o)
+				}
+			}
+		}()
+	}
+	wg.Wait()
+}
+
 // TestFilterUsableObjects tests the filterUsableObjects method
 func TestFilterUsableObjects(t *testing.T) {
 	pool, err := NewPool(testAllocator, testCleaner)
@@ -500,6 +588,28 @@ func TestReinsertKeptObjects(t *testing.T) {
 	// Verify objects were reinserted
 	if shard.Head.Load() != obj1 {
 		t.Error("reinsertKeptObjects() should reinsert objects")
+	}
+}
+
+// TestReinsertKeptObjectsWithExistingHead covers reinsert when shard already has a head (currentHead != nil).
+func TestReinsertKeptObjectsWithExistingHead(t *testing.T) {
+	pool, err := NewPool(testAllocator, testCleaner)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+
+	shard := pool.Shards[0]
+	kept1, kept2 := pool.Get(), pool.Get()
+	kept1.SetNext(kept2)
+	kept2.SetNext(nil)
+	existing := pool.Get()
+	shard.Head.Store(existing) // simulate existing head so reinsert chains keptTail.SetNext(currentHead)
+
+	pool.reinsertKeptObjects(shard, kept1, kept2)
+
+	if shard.Head.Load() != kept1 {
+		t.Error("reinsertKeptObjects() should install kept head")
 	}
 }
 
@@ -581,6 +691,18 @@ func TestConcurrentAccess(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
 		<-done
+	}
+}
+
+// TestValidateConfigNumShardsNegative ensures NumShards < 0 is rejected.
+func TestValidateConfigNumShardsNegative(t *testing.T) {
+	err := validateConfig(Config[TestObject, *TestObject]{
+		Allocator: testAllocator,
+		Cleaner:   testCleaner,
+		NumShards: -1,
+	})
+	if err == nil {
+		t.Error("validateConfig() should return error for NumShards < 0")
 	}
 }
 
@@ -1020,6 +1142,27 @@ func TestSingleObjectFastPath(t *testing.T) {
 	}
 	if obj2 != obj1 {
 		t.Error("Get() should return the same object from single object fast path")
+	}
+}
+
+// TestGetFromHead ensures Get pops from Head list when Single is empty (covers Head CAS path).
+func TestGetFromHead(t *testing.T) {
+	cfg := DefaultConfig(testAllocator, testCleaner)
+	cfg.NumShards = 1
+	cfg.Cleanup.Enabled = false
+	pool, err := NewPoolWithConfig(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+
+	o1, o2 := pool.Get(), pool.Get()
+	pool.Put(o1)
+	pool.Put(o2)    // Single=o1, Head=o2
+	_ = pool.Get()  // takes from Single
+	o := pool.Get() // takes from Head
+	if o == nil || o != o2 {
+		t.Errorf("Get() should return object from Head, got %v", o)
 	}
 }
 
