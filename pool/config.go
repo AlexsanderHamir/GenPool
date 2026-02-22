@@ -19,9 +19,9 @@ var (
 type GcLevel string
 
 var (
-	GcDisable   GcLevel = "disable"
-	GcLow       GcLevel = "low"
-	GcModerate  GcLevel = "moderate"
+	GcDisable    GcLevel = "disable"
+	GcLow        GcLevel = "low"
+	GcModerate   GcLevel = "moderate"
 	GcAggressive GcLevel = "aggressive"
 )
 
