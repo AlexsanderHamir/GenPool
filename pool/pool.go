@@ -6,6 +6,7 @@
 package pool
 
 import (
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"unsafe"
@@ -41,6 +42,11 @@ func NewPoolWithConfig[T any, P Poolable[T]](cfg Config[T, P]) (*ShardedPool[T, 
 		return nil, err
 	}
 
+	numShards := cfg.NumShards
+	if numShards <= 0 {
+		numShards = runtime.GOMAXPROCS(0)
+	}
+
 	pool := &ShardedPool[T, P]{
 		cfg:       cfg,
 		stopClean: make(chan struct{}),
@@ -72,7 +78,8 @@ func initShards[T any, P Poolable[T]](p *ShardedPool[T, P]) {
 // Get returns an object from the pool or allocates a new one. Returns nil if
 // MaxPoolSize is set, reached, and no reusable object is available.
 func (p *ShardedPool[T, P]) Get() P {
-	shardID := runtimeProcPin()
+	procID := runtimeProcPin()
+	shardID := procID % len(p.Shards)
 	shard := p.Shards[shardID]
 	runtimeProcUnpin()
 

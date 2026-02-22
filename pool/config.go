@@ -5,7 +5,6 @@ package pool
 import (
 	"errors"
 	"fmt"
-	"runtime"
 	"time"
 )
 
@@ -23,11 +22,6 @@ var (
 	GcLow        GcLevel = "low"
 	GcModerate   GcLevel = "moderate"
 	GcAggressive GcLevel = "aggressive"
-)
-
-// numShards is GOMAXPROCS at init. Set runtime.GOMAXPROCS(n) before NewPool to change.
-var (
-	numShards = runtime.GOMAXPROCS(0)
 )
 
 // CleanupPolicy configures automatic eviction of underused objects.
@@ -71,6 +65,11 @@ func DefaultCleanupPolicy(level GcLevel) CleanupPolicy {
 
 // Config holds pool configuration.
 type Config[T any, P Poolable[T]] struct {
+	// NumShards is the number of pool shards.
+	// Passing zero means use runtime.GOMAXPROCS(0) at pool creation time (one shard per CPU).
+	// Passing a positive value overrides the default (e.g. for testing or to tune contention).
+	NumShards int
+
 	Cleanup   CleanupPolicy
 	Growth    GrowthPolicy
 	Allocator Allocator[T]
@@ -86,6 +85,7 @@ type GrowthPolicy struct {
 // DefaultConfig returns a config with moderate cleanup and the given allocator/cleaner.
 func DefaultConfig[T any, P Poolable[T]](allocator Allocator[T], cleaner Cleaner[T]) Config[T, P] {
 	return Config[T, P]{
+		NumShards: 0,
 		Cleanup:   DefaultCleanupPolicy(GcModerate),
 		Allocator: allocator,
 		Cleaner:   cleaner,
@@ -99,7 +99,9 @@ func validateConfig[T any, P Poolable[T]](cfg Config[T, P]) error {
 	if cfg.Cleaner == nil {
 		return fmt.Errorf("%w: cleaner is required", ErrNoCleaner)
 	}
-
+	if cfg.NumShards < 0 {
+		return errors.New("NumShards must be 0 (default) or positive")
+	}
 	return nil
 }
 
