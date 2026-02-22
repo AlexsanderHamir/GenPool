@@ -121,7 +121,7 @@ Growth: pool.GrowthPolicy{
 }
 ```
 
-If `Enable` is false or Growth is zero, the pool has no size limit and relies on cleanup (if enabled) for reclaiming memory.
+If `Enable` is false, the pool has no size limit and relies on cleanup (if enabled) for reclaiming memory.
 
 ## Performance
 
