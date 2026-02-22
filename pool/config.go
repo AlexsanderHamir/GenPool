@@ -1,4 +1,5 @@
-// Config, cleanup policy, growth policy, and validation for the pool.
+// Config, cleanup policy, growth policy, validation, and shard count. Used when
+// building a pool via NewPoolWithConfig.
 package pool
 
 import (
@@ -8,55 +9,35 @@ import (
 	"time"
 )
 
-// Common errors that may be returned by the pool.
+// Common errors returned by the pool.
 var (
-	// ErrNoAllocator is returned when attempting to get an object but no allocator is configured.
 	ErrNoAllocator = errors.New("no allocator configured")
-
-	// ErrNoCleaner is returned when attempting to create a pool but no cleaner is configured.
-	ErrNoCleaner = errors.New("no cleaner configured")
+	ErrNoCleaner   = errors.New("no cleaner configured")
 )
 
-// GcLevel offers different levels for clean up configuration.
-// These presets control how aggressively GenPool reclaims memory.
-// Note: Go's GC may still run unless you explicitly suppress it via debug.SetGCPercent(-1)
+// GcLevel selects how aggressively the pool reclaims memory. Go's GC may still run.
 type GcLevel string
 
 var (
-	// GcDisable disables GenPool's cleanup completely.
-	// Objects will stay in the pool indefinitely unless manually cleared.
-	GcDisable GcLevel = "disable"
-
-	// GcLow performs cleanup at long intervals with minimal aggression.
-	// Good for low-latency, high-reuse scenarios.
-	GcLow GcLevel = "low"
-
-	// GcModerate performs cleanup at regular intervals and evicts objects
-	// that are lightly used. Balances reuse and memory usage.
-	GcModerate GcLevel = "moderate"
-
-	// GcAggressive enables frequent cleanup and removes objects
-	// that are not reused often. Best for memory-constrained environments.
+	GcDisable   GcLevel = "disable"
+	GcLow       GcLevel = "low"
+	GcModerate  GcLevel = "moderate"
 	GcAggressive GcLevel = "aggressive"
 )
 
-// The number of shards is tied to GOMAXPROCS (max OS threads running Go code in parallel).
-// To reduce sharding, adjust GOMAXPROCS via runtime.GOMAXPROCS(n) before creating the pool.
+// numShards is GOMAXPROCS at init. Set runtime.GOMAXPROCS(n) before NewPool to change.
 var (
 	numShards = runtime.GOMAXPROCS(0)
 )
 
-// CleanupPolicy defines how the pool should clean up unused objects.
+// CleanupPolicy configures automatic eviction of underused objects.
 type CleanupPolicy struct {
-	// Enabled determines if automatic cleanup is enabled.
-	Enabled bool
-	// Interval is how often the cleanup should run.
-	Interval time.Duration
-	// MinUsageCount is the number of usage BELOW which an object will be evicted.
+	Enabled       bool
+	Interval      time.Duration
 	MinUsageCount int64
 }
 
-// DefaultCleanupPolicy returns a default cleanup configuration based on specified level.
+// DefaultCleanupPolicy returns a CleanupPolicy for the given level; unknown levels use moderate.
 func DefaultCleanupPolicy(level GcLevel) CleanupPolicy {
 	switch level {
 	case GcDisable:
@@ -80,7 +61,6 @@ func DefaultCleanupPolicy(level GcLevel) CleanupPolicy {
 			MinUsageCount: 3,
 		}
 	default:
-		// Fallback to moderate if unrecognized
 		return CleanupPolicy{
 			Enabled:       true,
 			Interval:      2 * time.Minute,
@@ -89,32 +69,21 @@ func DefaultCleanupPolicy(level GcLevel) CleanupPolicy {
 	}
 }
 
-// Config holds configuration options for the pool.
+// Config holds pool configuration.
 type Config[T any, P Poolable[T]] struct {
-	// Cleanup defines the cleanup policy for the pool
-	Cleanup CleanupPolicy
-
-	// Growth defined the growth policy for the pool
-	Growth GrowthPolicy
-
-	// Allocator is the function to create new objects
+	Cleanup   CleanupPolicy
+	Growth    GrowthPolicy
 	Allocator Allocator[T]
-
-	// Cleaner is the function to clean objects before returning them to the pool
-	Cleaner Cleaner[T]
+	Cleaner   Cleaner[T]
 }
 
-// GrowthPolicy controls how the pool is allowed to grow.
-// If unset, the pool will grow indefinitely, and any cleanup will rely solely on the CleanupPolicy.
+// GrowthPolicy limits pool size when Enable is true.
 type GrowthPolicy struct {
-	// MaxPoolSize defines the maximum number of objects the pool is allowed to grow to.
 	MaxPoolSize int64
-
-	// Enable activates growth control. If disabled, the pool will grow and shrink freely based on your configuration.
-	Enable bool
+	Enable      bool
 }
 
-// DefaultConfig returns a default pool configuration for type T.
+// DefaultConfig returns a config with moderate cleanup and the given allocator/cleaner.
 func DefaultConfig[T any, P Poolable[T]](allocator Allocator[T], cleaner Cleaner[T]) Config[T, P] {
 	return Config[T, P]{
 		Cleanup:   DefaultCleanupPolicy(GcModerate),

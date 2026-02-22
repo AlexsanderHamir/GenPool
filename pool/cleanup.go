@@ -23,7 +23,6 @@ func (p *ShardedPool[T, P]) startCleaner() {
 	}()
 }
 
-// cleanup removes idle objects based on the [CleanupPolicy].
 func (p *ShardedPool[T, P]) cleanup() {
 	if !p.cfg.Cleanup.Enabled {
 		return
@@ -94,7 +93,6 @@ func (p *ShardedPool[T, P]) filterUsableObjects(head P) (keptHead, keptTail P, e
 }
 
 func (p *ShardedPool[T, P]) reinsertKeptObjects(shard *Shard[T, P], keptHead, keptTail P) {
-	// Find the shard index for this shard
 	var shardID int
 	for i, s := range p.Shards {
 		if s == shard {
@@ -103,7 +101,6 @@ func (p *ShardedPool[T, P]) reinsertKeptObjects(shard *Shard[T, P], keptHead, ke
 		}
 	}
 
-	// Set the correct shard index for all kept objects
 	current := keptHead
 	for current != nil {
 		current.SetShardIndex(shardID)

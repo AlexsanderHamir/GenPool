@@ -1,6 +1,8 @@
-// Package pool creates a pool of your objects without additional wrapping and shards the linked list
-// based on the number of available logical CPUs. This design improves performance under
-// high concurrency and when there is significant work done between getting and returning objects.
+// Package pool provides a sharded object pool without extra wrapping. Sharding is
+// by GOMAXPROCS for better concurrency when there is significant work between Get and Put.
+//
+// This file defines the pool types (Shard, ShardedPool), construction (NewPool,
+// NewPoolWithConfig), Get/Put, clear/Close, and runtime proc pinning linknames.
 package pool
 
 import (
@@ -9,40 +11,31 @@ import (
 	"unsafe"
 )
 
-// Shard represents a single shard in the pool.
-// It is 64 bytes in total to avoid false sharing across CPU cache lines.
+// Shard is a single pool shard; padding avoids false sharing across cache lines.
 type Shard[T any, P Poolable[T]] struct {
-	Head   atomic.Pointer[T] // 8 bytes
-	Single atomic.Pointer[T] // 8 bytes - fast path for single object
+	Head   atomic.Pointer[T]
+	Single atomic.Pointer[T]
 
-	// Padding to avoid false sharing
 	_ [128 - unsafe.Sizeof(atomic.Pointer[T]{})*2]byte
 }
 
-// ShardedPool is the main pool implementation using sharding for better concurrency.
+// ShardedPool is the main pool implementation.
 type ShardedPool[T any, P Poolable[T]] struct {
-	// shards is a slice of pool shards, each on its own cache line
 	Shards []*Shard[T, P]
 
-	// stopClean signals the cleanup goroutine to stop
 	stopClean chan struct{}
+	cleanWg   sync.WaitGroup
+	cfg       Config[T, P]
 
-	// cleanWg waits for the cleanup goroutine to finish
-	cleanWg sync.WaitGroup
-
-	// cfg holds the pool configuration
-	cfg Config[T, P]
-
-	// CurrentPoolLength changes at runtime, keeping track of how many uniqe objects have been created
 	CurrentPoolLength atomic.Int64
 }
 
-// NewPool creates a new sharded pool with the given configuration.
+// NewPool creates a sharded pool with the given allocator and cleaner.
 func NewPool[T any, P Poolable[T]](allocator Allocator[T], cleaner Cleaner[T]) (*ShardedPool[T, P], error) {
 	return NewPoolWithConfig(DefaultConfig[T, P](allocator, cleaner))
 }
 
-// NewPoolWithConfig creates a new sharded pool with the specified configuration.
+// NewPoolWithConfig creates a sharded pool with the given config.
 func NewPoolWithConfig[T any, P Poolable[T]](cfg Config[T, P]) (*ShardedPool[T, P], error) {
 	if err := validateConfig(cfg); err != nil {
 		return nil, err
@@ -76,14 +69,13 @@ func initShards[T any, P Poolable[T]](p *ShardedPool[T, P]) {
 	}
 }
 
-// Get returns an object from the pool or creates a new one.
-// Returns nil if MaxPoolSize is set, reached, and no reusable objects are available.
+// Get returns an object from the pool or allocates a new one. Returns nil if
+// MaxPoolSize is set, reached, and no reusable object is available.
 func (p *ShardedPool[T, P]) Get() P {
 	shardID := runtimeProcPin()
 	shard := p.Shards[shardID]
 	runtimeProcUnpin()
 
-	// Fast path: check single object first
 	if single := shard.Single.Load(); single != nil {
 		if shard.Single.CompareAndSwap(single, nil) {
 			P(single).IncrementUsage()
@@ -91,11 +83,10 @@ func (p *ShardedPool[T, P]) Get() P {
 		}
 	}
 
-	// Fast path: try to get object from shard
 	for {
 		oldHead := P(shard.Head.Load())
 		if oldHead == nil {
-			break // No objects available, fall through to allocation
+			break
 		}
 
 		next := oldHead.GetNext()
@@ -103,7 +94,6 @@ func (p *ShardedPool[T, P]) Get() P {
 			oldHead.IncrementUsage()
 			return oldHead
 		}
-		// CAS failed, retry
 	}
 
 	// Direct allocation path
@@ -126,28 +116,26 @@ func (p *ShardedPool[T, P]) Get() P {
 	return obj
 }
 
-// Put returns an object to the pool.
 func (p *ShardedPool[T, P]) Put(obj P) {
 	p.cfg.Cleaner(obj)
 
 	shardID := obj.GetShardIndex()
 	shard := p.Shards[shardID]
 
-	// Fast path: try single object first
 	if shard.Single.CompareAndSwap(nil, obj) {
 		return
 	}
 
 	for {
 		oldHead := P(shard.Head.Load())
-		obj.SetNext(oldHead) // set before CAS so Get() never sees obj with wrong next (#31, #32)
+		obj.SetNext(oldHead) // before CAS so Get never sees wrong next (#31, #32)
 		if shard.Head.CompareAndSwap(oldHead, obj) {
 			return
 		}
 	}
 }
 
-// clear removes all objects from the pool and decrements the pool length accordingly.
+// clear removes all objects from the pool and updates CurrentPoolLength.
 func (p *ShardedPool[T, P]) clear() {
 	for _, shard := range p.Shards {
 		for {
@@ -157,8 +145,6 @@ func (p *ShardedPool[T, P]) clear() {
 			}
 
 			if shard.Head.CompareAndSwap(current, nil) {
-				// We have successfully taken the list.
-				// Now iterate and clean it.
 				removedCount := int64(0)
 				for current != nil {
 					next := current.GetNext()
@@ -170,9 +156,8 @@ func (p *ShardedPool[T, P]) clear() {
 				if removedCount > 0 {
 					p.CurrentPoolLength.Add(-removedCount)
 				}
-				break // move to next shard
+				break
 			}
-			// Lost the race, try again on the same shard.
 		}
 	}
 }
