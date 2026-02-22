@@ -4,211 +4,19 @@
 package pool
 
 import (
-	"errors"
-	"fmt"
-	"runtime"
 	"sync"
 	"sync/atomic"
-	"time"
 	"unsafe"
 )
-
-// Common errors that may be returned by the pool.
-var (
-	// ErrNoAllocator is returned when attempting to get an object but no allocator is configured.
-	ErrNoAllocator = errors.New("no allocator configured")
-
-	// ErrNoCleaner is returned when attempting to create a pool but no cleaner is configured.
-	ErrNoCleaner = errors.New("no cleaner configured")
-)
-
-// GcLevel offers different levels for clean up configuration.
-// These presets control how aggressively GenPool reclaims memory.
-// Note: Go's GC may still run unless you explicitly suppress it via debug.SetGCPercent(-1)
-type GcLevel string
-
-var (
-	// GcDisable disables GenPool's cleanup completely.
-	// Objects will stay in the pool indefinitely unless manually cleared.
-	GcDisable GcLevel = "disable"
-
-	// GcLow performs cleanup at long intervals with minimal aggression.
-	// Good for low-latency, high-reuse scenarios.
-	GcLow GcLevel = "low"
-
-	// GcModerate performs cleanup at regular intervals and evicts objects
-	// that are lightly used. Balances reuse and memory usage.
-	GcModerate GcLevel = "moderate"
-
-	// GcAggressive enables frequent cleanup and removes objects
-	// that are not reused often. Best for memory-constrained environments.
-	GcAggressive GcLevel = "aggressive"
-)
-
-// The number of shards is tied to GOMAXPROCS (max OS threads running Go code in parallel).
-// To reduce sharding, adjust GOMAXPROCS via runtime.GOMAXPROCS(n) before creating the pool.
-var (
-	numShards = runtime.GOMAXPROCS(0)
-)
-
-// CleanupPolicy defines how the pool should clean up unused objects.
-type CleanupPolicy struct {
-	// Enabled determines if automatic cleanup is enabled.
-	Enabled bool
-	// Interval is how often the cleanup should run.
-	Interval time.Duration
-	// MinUsageCount is the number of usage BELOW which an object will be evicted.
-	MinUsageCount int64
-}
-
-// DefaultCleanupPolicy returns a default cleanup configuration based on specified level.
-func DefaultCleanupPolicy(level GcLevel) CleanupPolicy {
-	switch level {
-	case GcDisable:
-		return CleanupPolicy{}
-	case GcLow:
-		return CleanupPolicy{
-			Enabled:       true,
-			Interval:      10 * time.Minute,
-			MinUsageCount: 1,
-		}
-	case GcModerate:
-		return CleanupPolicy{
-			Enabled:       true,
-			Interval:      2 * time.Minute,
-			MinUsageCount: 2,
-		}
-	case GcAggressive:
-		return CleanupPolicy{
-			Enabled:       true,
-			Interval:      30 * time.Second,
-			MinUsageCount: 3,
-		}
-	default:
-		// Fallback to moderate if unrecognized
-		return CleanupPolicy{
-			Enabled:       true,
-			Interval:      2 * time.Minute,
-			MinUsageCount: 2,
-		}
-	}
-}
-
-// Allocator is a function type that creates new objects for the pool.
-type Allocator[T any] func() *T
-
-// Cleaner is a function type that cleans up objects before they are returned to the pool.
-type Cleaner[T any] func(*T)
-
-// Poolable is an interface that objects must implement to be stored in the pool.
-type Poolable[T any] interface {
-	*T
-	// GetNext returns the next object in the pool's linked list
-	GetNext() *T
-	// SetNext sets the next object in the pool's linked list
-	SetNext(next *T)
-	// GetUsageCount returns the number of times this object has been used
-	GetUsageCount() int64
-	// IncrementUsage increments the usage count of this object
-	IncrementUsage()
-	// ResetUsage resets the usage count to 0
-	ResetUsage()
-	// SetShardIndex sets the shard index for this object
-	SetShardIndex(index int)
-	// GetShardIndex returns the shard index for this object
-	GetShardIndex() int
-}
-
-// Fields provides intrusive fields and logic for poolable objects.
-// By embedding this struct in your types, you avoid having to implement
-// pooling logic separately for each pool.
-type Fields[T any] struct {
-	usageCount atomic.Int64
-	next       atomic.Pointer[T]
-	shardIndex int // Track which shard this object belongs to
-}
-
-// GetNext implements interface function
-func (p *Fields[T]) GetNext() *T {
-	return p.next.Load()
-}
-
-// SetNext implements interface function
-func (p *Fields[T]) SetNext(n *T) {
-	p.next.Store(n)
-}
-
-// GetUsageCount implements interface function
-func (p *Fields[T]) GetUsageCount() int64 {
-	return p.usageCount.Load()
-}
-
-// IncrementUsage implements interface function
-func (p *Fields[T]) IncrementUsage() {
-	p.usageCount.Add(1)
-}
-
-// ResetUsage implements interface function
-func (p *Fields[T]) ResetUsage() {
-	p.usageCount.Store(0)
-}
-
-// SetShardIndex sets the shard index for this object
-func (p *Fields[T]) SetShardIndex(index int) {
-	p.shardIndex = index
-}
-
-// GetShardIndex returns the shard index for this object
-func (p *Fields[T]) GetShardIndex() int {
-	return p.shardIndex
-}
-
-// Config holds configuration options for the pool.
-type Config[T any, P Poolable[T]] struct {
-	// Cleanup defines the cleanup policy for the pool
-	Cleanup CleanupPolicy
-
-	// Growth defined the growth policy for the pool
-	Growth GrowthPolicy
-
-	// Allocator is the function to create new objects
-	Allocator Allocator[T]
-
-	// Cleaner is the function to clean objects before returning them to the pool
-	Cleaner Cleaner[T]
-}
-
-// GrowthPolicy controls how the pool is allowed to grow.
-// If unset, the pool will grow indefinitely, and any cleanup will rely solely on the CleanupPolicy.
-type GrowthPolicy struct {
-	// MaxPoolSize defines the maximum number of objects the pool is allowed to grow to.
-	MaxPoolSize int64
-
-	// Enable activates growth control. If disabled, the pool will grow and shrink freely based on your configuration.
-	Enable bool
-}
-
-// DefaultConfig returns a default pool configuration for type T.
-func DefaultConfig[T any, P Poolable[T]](allocator Allocator[T], cleaner Cleaner[T]) Config[T, P] {
-	return Config[T, P]{
-		Cleanup:   DefaultCleanupPolicy(GcModerate),
-		Allocator: allocator,
-		Cleaner:   cleaner,
-	}
-}
 
 // Shard represents a single shard in the pool.
 // It is 64 bytes in total to avoid false sharing across CPU cache lines.
 type Shard[T any, P Poolable[T]] struct {
 	Head   atomic.Pointer[T] // 8 bytes
 	Single atomic.Pointer[T] // 8 bytes - fast path for single object
-	Cond   *sync.Cond        // 8 bytes
-	Mutex  *sync.Mutex       // 8 bytes
 
-	// Padding to make the struct 64 bytes in total
-	_ [128 - unsafe.Sizeof(atomic.Pointer[T]{})*2 -
-		unsafe.Sizeof((*sync.Cond)(nil)) -
-		unsafe.Sizeof((*sync.Mutex)(nil))]byte
+	// Padding to avoid false sharing
+	_ [128 - unsafe.Sizeof(atomic.Pointer[T]{})*2]byte
 }
 
 // ShardedPool is the main pool implementation using sharding for better concurrency.
@@ -227,24 +35,6 @@ type ShardedPool[T any, P Poolable[T]] struct {
 
 	// CurrentPoolLength changes at runtime, keeping track of how many uniqe objects have been created
 	CurrentPoolLength atomic.Int64
-
-	// blockedShards keeps track of how many goroutines are blocked and in which shards.
-	blockedShards map[int]*atomic.Int64
-}
-
-func (p *ShardedPool[T, P]) getMostBlockedShard() *Shard[T, P] {
-	var mostBlockedShard *Shard[T, P]
-	var maxBlocked int64 = -1
-
-	for shardID, counter := range p.blockedShards {
-		val := counter.Load()
-		if val > maxBlocked {
-			maxBlocked = val
-			mostBlockedShard = p.Shards[shardID]
-		}
-	}
-
-	return mostBlockedShard
 }
 
 // NewPool creates a new sharded pool with the given configuration.
@@ -259,10 +49,9 @@ func NewPoolWithConfig[T any, P Poolable[T]](cfg Config[T, P]) (*ShardedPool[T, 
 	}
 
 	pool := &ShardedPool[T, P]{
-		cfg:           cfg,
-		stopClean:     make(chan struct{}),
-		blockedShards: map[int]*atomic.Int64{},
-		Shards:        make([]*Shard[T, P], numShards),
+		cfg:       cfg,
+		stopClean: make(chan struct{}),
+		Shards:    make([]*Shard[T, P], numShards),
 	}
 
 	initShards(pool)
@@ -277,39 +66,13 @@ func NewPoolWithConfig[T any, P Poolable[T]](cfg Config[T, P]) (*ShardedPool[T, 
 	return pool, nil
 }
 
-func validateConfig[T any, P Poolable[T]](cfg Config[T, P]) error {
-	if cfg.Allocator == nil {
-		return fmt.Errorf("%w: allocator is required", ErrNoAllocator)
-	}
-	if cfg.Cleaner == nil {
-		return fmt.Errorf("%w: cleaner is required", ErrNoCleaner)
-	}
-
-	return nil
-}
-
-func validateCleanupConfig[T any, P Poolable[T]](cfg Config[T, P]) error {
-	if cfg.Cleanup.Interval <= 0 {
-		return errors.New("cleanup interval must be greater than 0")
-	}
-	if cfg.Cleanup.MinUsageCount <= 0 {
-		return errors.New("minimum usage count must be greater than 0")
-	}
-	return nil
-}
-
 func initShards[T any, P Poolable[T]](p *ShardedPool[T, P]) {
 	for i := range p.Shards {
-		mu := &sync.Mutex{}
-		shard := &Shard[T, P]{
-			Mutex: mu,
-			Cond:  sync.NewCond(mu),
-		}
+		shard := &Shard[T, P]{}
 		shard.Head.Store(nil)
 		shard.Single.Store(nil)
 
 		p.Shards[i] = shard
-		p.blockedShards[i] = new(atomic.Int64)
 	}
 }
 
@@ -363,90 +126,6 @@ func (p *ShardedPool[T, P]) Get() P {
 	return obj
 }
 
-// GetBlock retrieves an object from the pool, blocking if necessary until one becomes available.
-// It first attempts to reuse an object from the shard, then allocates a new one if the pool isn't full.
-// If the pool has reached its maximum size, it blocks until another goroutine puts an object back.
-func (p *ShardedPool[T, P]) GetBlock() P {
-	shardID := runtimeProcPin()
-	shard := p.Shards[shardID]
-	runtimeProcUnpin()
-
-	// Try fast path
-	if obj, ok := p.retrieveFromShard(shard); ok {
-		obj.IncrementUsage()
-		return obj
-	}
-
-	// Try to allocate new one if allowed
-	if !p.cfg.Growth.Enable || p.CurrentPoolLength.Load() < p.cfg.Growth.MaxPoolSize {
-		obj := P(p.cfg.Allocator())
-		obj.SetShardIndex(shardID)
-		obj.IncrementUsage()
-		p.CurrentPoolLength.Add(1)
-		return obj
-	}
-
-	// Block: resource exhausted, wait for one to be returned
-	p.blockedShards[shardID].Add(1)
-	shard.Mutex.Lock()
-	defer shard.Mutex.Unlock()
-
-	for {
-		if obj, ok := p.retrieveFromShard(shard); ok {
-			obj.IncrementUsage()
-			return obj
-		}
-		shard.Cond.Wait()
-	}
-}
-
-// PutBlock returns an object to the pool and signals a blocked goroutine, if any.
-// It attempts to atomically insert the object at the head of the most blocked shard's list.
-// Only works if its returned within the same goroutine.
-func (p *ShardedPool[T, P]) PutBlock(obj P) {
-	p.cfg.Cleaner(obj)
-	shard := p.getMostBlockedShard()
-
-	// Find the shard index for the most blocked shard
-	var shardID int
-	for i, s := range p.Shards {
-		if s == shard {
-			shardID = i
-			break
-		}
-	}
-	obj.SetShardIndex(shardID)
-
-	for {
-		oldHead := P(shard.Head.Load())
-
-		obj.SetNext(oldHead) // set before CAS so Get() never sees obj with wrong next (issues: #31, #32)
-		if shard.Head.CompareAndSwap(oldHead, obj) {
-			shard.Cond.Signal()
-			return
-		}
-	}
-}
-
-// GetN returns N objects.
-// This implementation creates memory, don't use it in the hot path,
-// "make" always makes things much slower.
-func (p *ShardedPool[T, P]) GetN(n int) []P {
-	shardID := runtimeProcPin()
-	runtimeProcUnpin()
-
-	objs := make([]P, n) // WARNING
-	for i := range n {
-		obj := p.Get()
-		if obj != nil {
-			obj.SetShardIndex(shardID)
-		}
-		objs[i] = obj
-	}
-
-	return objs
-}
-
 // Put returns an object to the pool.
 func (p *ShardedPool[T, P]) Put(obj P) {
 	p.cfg.Cleaner(obj)
@@ -461,36 +140,14 @@ func (p *ShardedPool[T, P]) Put(obj P) {
 
 	for {
 		oldHead := P(shard.Head.Load())
-		obj.SetNext(oldHead) // set before CAS so Get() never sees obj with wrong next (issues: #31, #32)
+		obj.SetNext(oldHead) // set before CAS so Get() never sees obj with wrong next (#31, #32)
 		if shard.Head.CompareAndSwap(oldHead, obj) {
 			return
 		}
 	}
 }
 
-// PutN returns N objects.
-func (p *ShardedPool[T, P]) PutN(objs []P) {
-	for _, obj := range objs {
-		p.Put(obj)
-	}
-}
-
-// retrieveFromShard gets an object from a specific shard.
-func (p *ShardedPool[T, P]) retrieveFromShard(shard *Shard[T, P]) (zero P, success bool) {
-	for {
-		oldHead := P(shard.Head.Load())
-		if oldHead == nil {
-			return zero, false
-		}
-
-		next := oldHead.GetNext()
-		if shard.Head.CompareAndSwap(oldHead, next) {
-			return oldHead, true
-		}
-	}
-}
-
-// Clear removes all objects from the pool and decrements the pool length accordingly.
+// clear removes all objects from the pool and decrements the pool length accordingly.
 func (p *ShardedPool[T, P]) clear() {
 	for _, shard := range p.Shards {
 		for {
@@ -516,123 +173,6 @@ func (p *ShardedPool[T, P]) clear() {
 				break // move to next shard
 			}
 			// Lost the race, try again on the same shard.
-		}
-	}
-}
-
-// startCleaner starts the background cleanup goroutine.
-func (p *ShardedPool[T, P]) startCleaner() {
-	p.cleanWg.Add(1)
-	go func() {
-		defer p.cleanWg.Done()
-		ticker := time.NewTicker(p.cfg.Cleanup.Interval)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ticker.C:
-				p.cleanup()
-			case <-p.stopClean:
-				return
-			}
-		}
-	}()
-}
-
-// cleanup removes idle objects based on the [CleanupPolicy].
-func (p *ShardedPool[T, P]) cleanup() {
-	if !p.cfg.Cleanup.Enabled {
-		return
-	}
-
-	for _, shard := range p.Shards {
-		p.cleanupShard(shard)
-	}
-}
-
-func (p *ShardedPool[T, P]) cleanupShard(shard *Shard[T, P]) {
-	oldHead := p.tryTakeOwnership(shard)
-	if oldHead == nil {
-		return
-	}
-
-	keptHead, keptTail, evictedCount := p.filterUsableObjects(oldHead)
-
-	if evictedCount > 0 {
-		p.CurrentPoolLength.Add(-int64(evictedCount))
-	}
-
-	if keptHead != nil {
-		p.reinsertKeptObjects(shard, keptHead, keptTail)
-	}
-}
-
-func (p *ShardedPool[T, P]) tryTakeOwnership(shard *Shard[T, P]) P {
-	head := P(shard.Head.Load())
-	if head == nil {
-		return nil
-	}
-	if !shard.Head.CompareAndSwap(head, nil) {
-		return nil
-	}
-	return head
-}
-
-// filterUsableObjects filters objects based on usage count and returns the kept head, kept tail, and number of evicted objects.
-func (p *ShardedPool[T, P]) filterUsableObjects(head P) (keptHead, keptTail P, evictedCount int) {
-	current := head
-
-	for current != nil {
-		next := current.GetNext()
-		usageCount := current.GetUsageCount()
-
-		if usageCount >= p.cfg.Cleanup.MinUsageCount {
-			current.ResetUsage()
-			if keptHead == nil {
-				keptHead = current
-			} else {
-				keptTail.SetNext(current)
-			}
-			keptTail = current
-		} else {
-			current.SetNext(nil)
-			evictedCount++
-		}
-		current = next
-	}
-
-	if keptHead == nil {
-		return nil, nil, evictedCount
-	}
-
-	keptTail.SetNext(nil)
-	return keptHead, keptTail, evictedCount
-}
-
-func (p *ShardedPool[T, P]) reinsertKeptObjects(shard *Shard[T, P], keptHead, keptTail P) {
-	// Find the shard index for this shard
-	var shardID int
-	for i, s := range p.Shards {
-		if s == shard {
-			shardID = i
-			break
-		}
-	}
-
-	// Set the correct shard index for all kept objects
-	current := keptHead
-	for current != nil {
-		current.SetShardIndex(shardID)
-		current = current.GetNext()
-	}
-
-	for {
-		currentHead := P(shard.Head.Load())
-		if currentHead != nil {
-			keptTail.SetNext(currentHead)
-		}
-		if shard.Head.CompareAndSwap(currentHead, keptHead) {
-			break
 		}
 	}
 }

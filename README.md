@@ -170,7 +170,7 @@ type GrowthPolicy struct {
 }
 ```
 
-> If the pool reaches its limit, it returns nil. To avoid this behavior, you can use GetBlock() or PutBlock(), which block until resources become available.
+> If the pool reaches its limit, Get() returns nil.
 
 ## Cleanup Policy
 

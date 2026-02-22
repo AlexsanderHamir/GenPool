@@ -277,8 +277,7 @@ func TestNewPoolWithConfig(t *testing.T) {
 // TestInitShards tests the initShards function
 func TestInitShards(t *testing.T) {
 	pool := &ShardedPool[TestObject, *TestObject]{
-		Shards:        make([]*Shard[TestObject, *TestObject], 4),
-		blockedShards: map[int]*atomic.Int64{},
+		Shards: make([]*Shard[TestObject, *TestObject], 4),
 	}
 
 	initShards(pool)
@@ -329,29 +328,6 @@ func TestGet(t *testing.T) {
 	}
 }
 
-// TestGetN tests the GetN method
-func TestGetN(t *testing.T) {
-	pool, err := NewPool(testAllocator, testCleaner)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer pool.Close()
-
-	objs := pool.GetN(3)
-	if len(objs) != 3 {
-		t.Errorf("GetN() returned %d objects, want 3", len(objs))
-	}
-
-	for i, obj := range objs {
-		if obj == nil {
-			t.Errorf("GetN() obj[%d] is nil", i)
-		}
-		if obj.GetUsageCount() != 1 {
-			t.Errorf("GetN() obj[%d] usage count = %d, want 1", i, obj.GetUsageCount())
-		}
-	}
-}
-
 // TestPut tests the Put method
 func TestPut(t *testing.T) {
 	pool, err := NewPool(testAllocator, testCleaner)
@@ -370,25 +346,6 @@ func TestPut(t *testing.T) {
 	}
 }
 
-// TestPutN tests the PutN method
-func TestPutN(t *testing.T) {
-	pool, err := NewPool(testAllocator, testCleaner)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer pool.Close()
-
-	objs := pool.GetN(3)
-	pool.PutN(objs)
-
-	// Verify all objects were cleaned
-	for i, obj := range objs {
-		if obj.ID != 0 || obj.Value != "" {
-			t.Errorf("PutN() obj[%d] not cleaned, got ID=%d, Value=%s", i, obj.ID, obj.Value)
-		}
-	}
-}
-
 // TestClear tests the clear method
 func TestClear(t *testing.T) {
 	pool, err := NewPool(testAllocator, testCleaner)
@@ -398,8 +355,12 @@ func TestClear(t *testing.T) {
 	defer pool.Close()
 
 	// Add some objects to the pool
-	objs := pool.GetN(3)
-	pool.PutN(objs)
+	for i := 0; i < 3; i++ {
+		obj := pool.Get()
+		if obj != nil {
+			pool.Put(obj)
+		}
+	}
 
 	// Clear the pool
 	pool.clear()
@@ -569,8 +530,12 @@ func TestClose(t *testing.T) {
 	}
 
 	// Add some objects
-	objs := pool.GetN(3)
-	pool.PutN(objs)
+	for i := 0; i < 3; i++ {
+		obj := pool.Get()
+		if obj != nil {
+			pool.Put(obj)
+		}
+	}
 
 	// Close the pool
 	pool.Close()
@@ -830,8 +795,12 @@ func TestClearRaceCondition(t *testing.T) {
 	defer pool.Close()
 
 	// Add some objects to the pool
-	objs := pool.GetN(5)
-	pool.PutN(objs)
+	for i := 0; i < 5; i++ {
+		obj := pool.Get()
+		if obj != nil {
+			pool.Put(obj)
+		}
+	}
 
 	// Create a goroutine that continuously adds objects while we clear
 	done := make(chan bool)
@@ -1039,109 +1008,6 @@ func TestGrowthPolicy(t *testing.T) {
 			t.Error("Get() should return object after one is returned to pool")
 		}
 	})
-
-	t.Run("BlocksWhenPoolAtMax", func(t *testing.T) {
-		cfg := DefaultConfig(testAllocator, testCleaner)
-		cfg.Cleanup.Enabled = false
-		cfg.Growth.Enable = true
-		cfg.Growth.MaxPoolSize = 2
-
-		pool, err := NewPoolWithConfig(cfg)
-		if err != nil {
-			t.Fatalf("NewPoolWithConfig() error = %v", err)
-		}
-		defer pool.Close()
-
-		// Fill pool to max size
-		obj1 := pool.GetBlock()
-		obj2 := pool.GetBlock()
-		if obj1 == nil || obj2 == nil {
-			t.Fatal("failed to allocate initial objects")
-		}
-
-		blockedCh := make(chan *TestObject, 1)
-
-		// This should block until an object is returned
-		go func() {
-			obj3 := pool.GetBlock()
-			blockedCh <- obj3
-		}()
-
-		// Ensure blocking actually happens (give the goroutine time to hit Wait)
-		time.Sleep(100 * time.Millisecond)
-
-		select {
-		case <-blockedCh:
-			t.Error("GetBlock() returned early — expected it to block")
-		default:
-			// Expected: still blocked
-		}
-
-		// Return one object to unblock the waiting goroutine
-		pool.PutBlock(obj1)
-
-		select {
-		case obj3 := <-blockedCh:
-			if obj3 == nil {
-				t.Error("GetBlock() unblocked but returned nil object")
-			}
-		case <-time.After(5 * time.Second):
-			t.Error("GetBlock() did not unblock after object was returned")
-		}
-	})
-}
-
-// TestGetBlockAndPutBlock tests the blocking Get and Put operations
-func TestGetBlockAndPutBlock(t *testing.T) {
-	cfg := DefaultConfig(testAllocator, testCleaner)
-	cfg.Cleanup.Enabled = false
-	cfg.Growth.Enable = true
-	cfg.Growth.MaxPoolSize = 1
-
-	pool, err := NewPoolWithConfig(cfg)
-	if err != nil {
-		t.Fatalf("NewPoolWithConfig() error = %v", err)
-	}
-	defer pool.Close()
-
-	// Get the first object
-	obj1 := pool.GetBlock()
-	if obj1 == nil {
-		t.Fatal("GetBlock() should return first object")
-	}
-
-	// Try to get a second object - this should block
-	blockedCh := make(chan *TestObject, 1)
-	go func() {
-		obj2 := pool.GetBlock()
-		blockedCh <- obj2
-	}()
-
-	// Wait a bit to ensure the goroutine is blocked
-	time.Sleep(50 * time.Millisecond)
-
-	select {
-	case <-blockedCh:
-		t.Error("GetBlock() should block when pool is at max size")
-	default:
-		// Expected: still blocked
-	}
-
-	// Return the object using PutBlock to unblock the waiting goroutine
-	pool.PutBlock(obj1)
-
-	// Now the blocked goroutine should get the object
-	select {
-	case obj2 := <-blockedCh:
-		if obj2 == nil {
-			t.Error("GetBlock() should return object after PutBlock")
-		}
-		if obj2 != obj1 {
-			t.Error("GetBlock() should return the same object that was put back")
-		}
-	case <-time.After(5 * time.Second):
-		t.Error("GetBlock() did not unblock after PutBlock")
-	}
 }
 
 // TestSingleObjectFastPath tests the fast path for single objects
