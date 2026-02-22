@@ -420,8 +420,8 @@ func (p *ShardedPool[T, P]) PutBlock(obj P) {
 	for {
 		oldHead := P(shard.Head.Load())
 
+		obj.SetNext(oldHead) // set before CAS so Get() never sees obj with wrong next (issues: #31, #32)
 		if shard.Head.CompareAndSwap(oldHead, obj) {
-			obj.SetNext(oldHead)
 			shard.Cond.Signal()
 			return
 		}
@@ -461,8 +461,8 @@ func (p *ShardedPool[T, P]) Put(obj P) {
 
 	for {
 		oldHead := P(shard.Head.Load())
+		obj.SetNext(oldHead) // set before CAS so Get() never sees obj with wrong next (issues: #31, #32)
 		if shard.Head.CompareAndSwap(oldHead, obj) {
-			obj.SetNext(oldHead)
 			return
 		}
 	}
