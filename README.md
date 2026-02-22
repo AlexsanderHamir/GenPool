@@ -81,7 +81,7 @@ p, err := pool.NewPoolWithConfig(config)
 
 ## Concepts
 
-- **Sharding** — The pool is split by GOMAXPROCS; each shard has its own lock-free list. Set `runtime.GOMAXPROCS(n)` before creating the pool to control shard count.
+- **Sharding** — The pool is split into multiple shards, each with its own lock-free list to reduce contention; the number of shards is set via `Config.NumShards` (defaulting to `runtime.GOMAXPROCS(0)` at creation) and can be overridden with a positive value for testing or tuning.
 - **Growth** — Without a growth policy, the pool grows unbounded. With `GrowthPolicy.Enable` and `MaxPoolSize`, Get returns `nil` when the cap is reached.
 - **Cleanup** — Optional background goroutine that periodically evicts objects whose usage count is below `MinUsageCount`. Disabled by default; enable via `CleanupPolicy` or `DefaultCleanupPolicy(level)`.
 
