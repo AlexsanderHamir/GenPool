@@ -2,16 +2,71 @@
 
 This object pool uses an atomic singly linked list built from the provided objects themselves to manage the pool efficiently, reducing indirection and allocations. Each object maintains a pointer to the next one using `atomic.Pointer`, allowing lock-free access and updates.
 
-The pool implements **sharding** by maintaining **X** independent linked lists up to the number of logical cores, two runtime functions are used `runtime_procPin` and `runtime_procUnpin`, which are low-level Go runtime functions that:
+## Sharded layout
 
-1. `runtime_procPin()`: Temporarily pins the current goroutine to its current processor (P) and returns the processor ID. This prevents the goroutine from being moved to a different processor during critical sections.
+The pool is **sharded**: there is one `Shard` per logical CPU by default (`runtime.GOMAXPROCS(0)` at construction, unless `Config.NumShards` overrides it). Each shard holds a **fast single-object slot** (`Single`) and a **lock-free stack** (`Head`) of pooled objects.
 
-2. `runtime_procUnpin()`: Unpins the goroutine from its processor, allowing it to be scheduled on any available processor again.
+```mermaid
+flowchart LR
+  subgraph Pool["ShardedPool"]
+    direction LR
+    S0["Shard 0: Single + Head"]
+    S1["Shard 1: Single + Head"]
+    Sk["…"]
+    Sn["Shard n-1: Single + Head"]
+  end
+```
 
-These functions are used in the `getShard()` method to efficiently determine which shard a goroutine should access, ensuring better cache locality and reducing contention. The processor ID returned by `runtime_procPin()` is used as the shard index, providing a simple and effective way to distribute load across the available CPU cores.
+## How a goroutine picks a shard
 
-The primary advantage of this approach is that it supports **efficient dynamic resizing** (growing and shrinking) of the pool without relying on locks or centralized data structures. Although the use of pointers and atomics sacrifices **some cache locality** compared to slice-based or array-backed pools, it still results in better throughput under concurrent access patterns, particularly in **high-contention environments**.
+Two runtime hooks are used in `Get` (see `pool.go`):
 
-By storing the `next` pointer atomically inside each object, the pool can quickly push or pop objects to/from the list using low-cost atomic operations. This design minimizes allocation overhead during peak loads and avoids blocking other goroutines, unlike traditional mutex-based pools.
+1. **`runtime.procPin`** — pins the current goroutine to its current P and returns a **processor id**.
+2. **`runtime.procUnpin`** — unpins after the shard is chosen.
 
-The combination of sharding and runtime optimizations makes this pool particularly effective for **highly concurrent workloads**, where multiple goroutines frequently acquire and release objects simultaneously. The sharded design ensures that even under extreme contention, the pool maintains predictable performance characteristics.
+**Shard index** is `procID % len(Shards)`. That spreads load across shards and improves cache locality versus a single global list.
+
+```mermaid
+flowchart LR
+  G[Goroutine calls Get]
+  G --> P[procPin → procID]
+  P --> M["shardID = procID % numShards"]
+  M --> U[procUnpin]
+  U --> SH[Use Shards shardID]
+```
+
+## Get
+
+On the chosen shard, `Get` tries **`Single`** first (one CAS). If that fails, it pops from the **`Head`** list (compare-and-swap the head pointer). If the lists are empty, it **allocates** via the configured allocator (respecting growth policy when enabled).
+
+```mermaid
+flowchart TD
+  A[Get] --> B[Pin → shard]
+  B --> C{Single non-empty?}
+  C -->|CAS take| R[Return object]
+  C -->|miss| D{Head list non-empty?}
+  D -->|CAS pop| R
+  D -->|empty| E{Growth / cap}
+  E -->|allocate| R
+  E -->|may return nil| Z[nil]
+```
+
+## Put
+
+`Put` runs the **Cleaner**, then routes the object to **`Shards[obj.shardIndex]`** (the shard recorded when the object was created or last tied to a shard). It tries to store into **`Single`** first; if that slot is busy, it **pushes** onto the **`Head`** list (with `SetNext` before CAS so readers never see a stale next pointer).
+
+```mermaid
+flowchart TD
+  P[Put] --> C[Cleaner]
+  C --> S[Shard from object shard index]
+  S --> F{Single empty?}
+  F -->|CAS store| D[Done]
+  F -->|busy| L[Push on Head list]
+  L --> D
+```
+
+## Why this shape
+
+By storing the `next` pointer inside each object and using atomics on `Single` and `Head`, the pool avoids mutexes on the hot path. Sharding reduces contention when many goroutines call `Get`/`Put` at once. The trade-off is **some** cache locality cost versus array-backed pools, but in **high-contention** workloads the sharded lock-free design usually wins on throughput.
+
+Optional **cleanup** (background eviction by usage) and **growth limits** are layered on top of this core; see [cleanup.md](./cleanup.md) and the `Config` type in code.
