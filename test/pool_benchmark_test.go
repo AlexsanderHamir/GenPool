@@ -1,30 +1,51 @@
 package test
 
 import (
-	"runtime"
 	"sync"
 	"testing"
 
 	"github.com/AlexsanderHamir/GenPool/pool"
 )
 
-// BenchmarkObject is a simple struct we'll use for benchmarking.
+const (
+	// benchParallelism is the RunParallel goroutine count. Raises contention on both pools;
+	// GenPool is sharded by GOMAXPROCS, so this value strongly affects relative behavior.
+	benchParallelism = 1000
+)
+
+// benchScenario is one row in the comparative matrix (same for GenPool and sync.Pool).
+type benchScenario struct {
+	name        string
+	innerIters  int
+	appendCount int
+}
+
+// Scenarios from pool-bound (read: overhead / weakness vs sync) to compute-bound.
+var benchScenarios = []benchScenario{
+	{name: "pool_only", innerIters: 0, appendCount: 0},
+	{name: "low", innerIters: 500, appendCount: 32},
+	{name: "medium", innerIters: 10_000, appendCount: 100},
+	{name: "high", innerIters: 100_000, appendCount: 256},
+	{name: "extreme", innerIters: 1_000_000, appendCount: 256},
+}
+
+// BenchmarkObject models a medium-sized pooled value (fields + embedded pool metadata).
 type BenchmarkObject struct {
-	// user fields
-	Name   string   // 16 bytes (pointer + length)
-	Data   []byte   // 24 bytes (pointer + len + cap)
-	Result int64    // 8 bytes - store computation result
-	_      [16]byte // 16 bytes padding = 64 bytes total
+	Name   string
+	Data   []byte
+	Result int64
+	_      [16]byte
 
 	pool.Fields[BenchmarkObject]
 }
 
-func cpuIntensiveWorkload(obj *BenchmarkObject) {
+// betweenGetAndPut is identical user work for both pools (deterministic, allocation-light
+// once slice capacity is warm).
+func betweenGetAndPut(obj *BenchmarkObject, innerIters, appendCount int) {
 	obj.Name = "cpu_test"
 
-	// Heavier CPU work
 	var result int64
-	for i := range 10_000 {
+	for i := range innerIters {
 		result += int64(i * i * i)
 		result ^= int64(i << 3)
 		if i%1000 == 0 {
@@ -33,70 +54,81 @@ func cpuIntensiveWorkload(obj *BenchmarkObject) {
 	}
 	obj.Result = result
 
-	// Minimal allocation - just set a small data payload
-	if cap(obj.Data) < 100 {
-		obj.Data = make([]byte, 0, 100)
+	if cap(obj.Data) < appendCount {
+		obj.Data = make([]byte, 0, appendCount)
 	}
 	obj.Data = obj.Data[:0]
 
-	// Add some derived data
-	for i := range 100 {
+	for i := range appendCount {
 		obj.Data = append(obj.Data, byte(result>>uint(i%8)))
 	}
 }
 
-// Helper functions for benchmarks.
-func allocator() *BenchmarkObject {
+func benchAllocator() *BenchmarkObject {
 	return &BenchmarkObject{Name: "test"}
 }
 
-func cleaner(obj *BenchmarkObject) {
+func benchCleaner(obj *BenchmarkObject) {
 	obj.Name = ""
 	obj.Data = obj.Data[:0]
 }
 
-func BenchmarkGenPool(b *testing.B) {
-	runtime.SetBlockProfileRate(1)
-	cfg := pool.Config[BenchmarkObject, *BenchmarkObject]{
-		Allocator: allocator,
-		Cleaner:   cleaner,
-	}
+func resetLikeCleaner(obj *BenchmarkObject) {
+	obj.Name = ""
+	obj.Data = obj.Data[:0]
+}
 
+func newGenPoolForBench(b *testing.B) (*pool.ShardedPool[BenchmarkObject, *BenchmarkObject], func()) {
+	b.Helper()
+	cfg := pool.Config[BenchmarkObject, *BenchmarkObject]{
+		Allocator: benchAllocator,
+		Cleaner:   benchCleaner,
+	}
 	p, err := pool.NewPoolWithConfig(cfg)
 	if err != nil {
-		b.Fatalf("error creating pool: %v", err)
+		b.Fatalf("GenPool: %v", err)
 	}
+	return p, func() { p.Close() }
+}
 
-	defer p.Close()
+func newSyncPoolForBench() *sync.Pool {
+	return &sync.Pool{New: func() any { return benchAllocator() }}
+}
 
-	b.SetParallelism(1000)
-	b.ResetTimer()
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			obj := p.Get()
-			p.Put(obj)
-		}
-	})
+func BenchmarkGenPool(b *testing.B) {
+	for _, sc := range benchScenarios {
+		b.Run(sc.name, func(b *testing.B) {
+			p, cleanup := newGenPoolForBench(b)
+			defer cleanup()
+
+			b.SetParallelism(benchParallelism)
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					obj := p.Get()
+					betweenGetAndPut(obj, sc.innerIters, sc.appendCount)
+					p.Put(obj)
+				}
+			})
+		})
+	}
 }
 
 func BenchmarkSyncPool(b *testing.B) {
-	runtime.SetBlockProfileRate(1)
-	p := &sync.Pool{
-		New: func() any {
-			return allocator()
-		},
+	for _, sc := range benchScenarios {
+		b.Run(sc.name, func(b *testing.B) {
+			p := newSyncPoolForBench()
+
+			b.SetParallelism(benchParallelism)
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					obj := p.Get().(*BenchmarkObject)
+					betweenGetAndPut(obj, sc.innerIters, sc.appendCount)
+					resetLikeCleaner(obj)
+					p.Put(obj)
+				}
+			})
+		})
 	}
-
-	b.SetParallelism(1000)
-	b.ResetTimer()
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			obj := p.Get().(*BenchmarkObject)
-
-			obj.Name = ""
-			obj.Data = obj.Data[:0]
-
-			p.Put(obj)
-		}
-	})
 }
